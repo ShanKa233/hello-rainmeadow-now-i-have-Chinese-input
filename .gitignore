@@ -1,0 +1,47 @@
+# 编译输出
+bin/
+obj/
+
+# Visual Studio 文件
+.vs/
+*.user
+*.suo
+*.userprefs
+*.sln.docstates
+*.vspscc
+*.vssscc
+
+# 编译后的DLL
+mod/plugins/*.dll
+
+# NuGet包
+packages/
+*.nupkg
+*.snupkg
+
+# 日志文件
+*.log
+
+# 临时文件
+[Tt]emp/
+[Tt]mp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# 个人设置和敏感信息
+*.config.user
+**/appsettings.*.json
+**/secrets.json
+
+# 引用的外部库
+lib/
+libs/
+references/ 

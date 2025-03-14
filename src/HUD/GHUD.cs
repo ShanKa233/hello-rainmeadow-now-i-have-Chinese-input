@@ -399,11 +399,23 @@ namespace GhostPlayer.GHud
                     if (!string.IsNullOrWhiteSpace(value))
                     {
                         OnInputFieldSubmit?.Invoke(value, inputField.caretPosition);
-                        inputField.text = "";
-                        currentInputString = "";
                     }
+                    // 无论是否有内容，都清空并关闭输入框
+                    inputField.text = "";
+                    currentInputString = "";
                     inputField.DeactivateInputField();
                     activated = false;
+                    LockInput = false;
+                }
+                // 如果失去焦点但没有按回车，则取消
+                else if (!inputField.isFocused)
+                {
+                    OnInputFieldCancel?.Invoke(value, inputField.caretPosition);
+                    inputField.text = "";
+                    currentInputString = "";
+                    inputField.DeactivateInputField();
+                    activated = false;
+                    LockInput = false;
                 }
             }
             catch (Exception ex)

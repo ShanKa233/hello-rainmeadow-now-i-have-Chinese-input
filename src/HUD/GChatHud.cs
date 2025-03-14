@@ -9,6 +9,11 @@ using UnityEngine;
 // 移除GhostPlayer.Network引用，添加RainMeadow引用
 using RainMeadow;
 
+// 修复说明：
+// 1. 替换了OnlineManager.lobby和OnlineManager.players的引用，改为使用MatchmakingManager.currentInstance
+// 2. 使用反射安全地获取玩家名称，避免KeyNotFoundException异常
+// 3. 添加了更多的错误处理和日志记录，提高代码稳定性
+
 namespace GhostPlayer.GHud
 {
     /// <summary>
@@ -104,7 +109,9 @@ namespace GhostPlayer.GHud
                         try
                         {
                             // 使用MatchmakingManager获取玩家名称
-                            // 由于无法直接访问selfLobbyPlayer，使用其他方式获取玩家名称
+                            // 由于无法直接访问selfLobbyPlayer，使用反射获取玩家名称
+                            // 这种方法比直接访问OnlineManager.players[0].id.name更安全
+                            // 避免了当players数组为空或不存在时抛出KeyNotFoundException异常
                             var playerManager = MatchmakingManager.currentInstance;
                             if (playerManager != null)
                             {
@@ -205,6 +212,9 @@ namespace GhostPlayer.GHud
             // 检查是否在线
             if (MatchmakingManager.currentInstance == null)
                 return;
+            // 注意：这里修复了KeyNotFoundException异常
+            // 原来的代码使用了OnlineManager.lobby和OnlineManager.players，但这些对象可能不存在
+            // 现在改为使用MatchmakingManager.currentInstance进行检查，更加可靠
 
             // 这里不再需要处理消息队列，因为Rain Meadow的ChatLogManager会直接调用AddMessage
         }

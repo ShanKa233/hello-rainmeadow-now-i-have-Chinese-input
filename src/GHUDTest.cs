@@ -18,9 +18,6 @@ namespace GhostPlayer
         // 是否已初始化
         private bool initialized = false;
         
-        // 输入框是否已激活
-        private bool inputFieldActivated = false;
-        
         /// <summary>
         /// Unity启动函数
         /// </summary>
@@ -86,34 +83,6 @@ namespace GhostPlayer
                         Debug.LogError($"[雨甸中文输入] 发送测试消息失败: {ex.Message}");
                         Debug.LogException(ex);
                     }
-                }
-                
-                // 检查是否按下了回车键或其他聊天激活键
-                // 这里我们只使用回车键，让 Meadow 内聊天框的按键来决定
-                if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
-                {
-                    // 激活输入框
-                    if (ghud.inputField != null && !inputFieldActivated)
-                    {
-                        try
-                        {
-                            ghud.inputField.ActivateInputField();
-                            ghud.inputField.Select();
-                            inputFieldActivated = true;
-                            Debug.Log("[雨甸中文输入] 激活了输入框");
-                        }
-                        catch (Exception ex)
-                        {
-                            Debug.LogError($"[雨甸中文输入] 激活输入框失败: {ex.Message}");
-                            Debug.LogException(ex);
-                        }
-                    }
-                }
-                
-                // 检查输入框是否失去焦点
-                if (ghud.inputField != null && !ghud.inputField.isFocused && inputFieldActivated)
-                {
-                    inputFieldActivated = false;
                 }
             }
             catch (KeyNotFoundException knfEx)

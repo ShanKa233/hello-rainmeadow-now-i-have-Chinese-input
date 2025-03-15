@@ -10,6 +10,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using Random = UnityEngine.Random;
+using RainMeadow;
 
 namespace GhostPlayer.GHud
 {
@@ -117,11 +118,6 @@ namespace GhostPlayer.GHud
                     eventSystem.AddComponent<EventSystem>();
                     eventSystem.AddComponent<StandaloneInputModule>();
                     DontDestroyOnLoad(eventSystem);
-                    Debug.Log("[雨甸中文输入] 创建了新的EventSystem");
-                }
-                else
-                {
-                    Debug.Log("[雨甸中文输入] 使用现有的EventSystem");
                 }
 
                 // 创建Futile容器
@@ -178,11 +174,16 @@ namespace GhostPlayer.GHud
         {
             try
             {
-                // 固定更新逻辑
-                timeStacker += framePerSec * Time.deltaTime;
-                if (timeStacker >= 1)
+                // 更新输入框状态
+                InputFieldUpdate();
+                
+                // 更新时间累加器
+                timeStacker += Time.deltaTime * framePerSec;
+                
+                // 如果累加器达到1，执行固定更新
+                while (timeStacker >= 1f)
                 {
-                    timeStacker--;
+                    timeStacker -= 1f;
                     FixUpdate();
                 }
 
@@ -191,12 +192,11 @@ namespace GhostPlayer.GHud
 
                 // 测试功能和输入框更新
                 TestFunc();
-                InputFieldUpdate();
             }
             catch (Exception ex)
             {
-                Debug.LogError("[雨甸中文输入] GHUD更新失败: " + ex.Message);
-                Debug.LogException(ex);
+                UnityEngine.Debug.LogError("[雨甸中文输入] GHUD更新失败: " + ex.Message);
+                UnityEngine.Debug.LogException(ex);
             }
         }
 
@@ -306,6 +306,28 @@ namespace GhostPlayer.GHud
             try
             {
                 Debug.Log("[雨甸中文输入] 开始设置输入框");
+
+                // 检查是否已存在输入框
+                var existingInputField = GameObject.Find("GHUDInputField");
+                if (existingInputField != null)
+                {
+                    Debug.Log("[雨甸中文输入] 已存在输入框，使用现有输入框");
+                    inputField = existingInputField.GetComponent<InputField>();
+                    if (inputField != null)
+                    {
+                        // 重新设置事件监听
+                        inputField.onValueChanged.RemoveAllListeners();
+                        inputField.onEndEdit.RemoveAllListeners();
+                        inputField.onValueChanged.AddListener(ListenChange);
+                        inputField.onEndEdit.AddListener(OnEndEdit);
+                        return;
+                    }
+                    else
+                    {
+                        Debug.Log("[雨甸中文输入] 现有输入框组件无效，删除后重新创建");
+                        Destroy(existingInputField);
+                    }
+                }
                 
                 // 创建输入框游戏对象
                 var obj = new GameObject("GHUDInputField");
@@ -393,22 +415,8 @@ namespace GhostPlayer.GHud
         {
             try
             {
-                // 如果按下了回车键，则提交
-                if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
-                {
-                    if (!string.IsNullOrWhiteSpace(value))
-                    {
-                        OnInputFieldSubmit?.Invoke(value, inputField.caretPosition);
-                    }
-                    // 无论是否有内容，都清空并关闭输入框
-                    inputField.text = "";
-                    currentInputString = "";
-                    inputField.DeactivateInputField();
-                    activated = false;
-                    LockInput = false;
-                }
                 // 如果失去焦点但没有按回车，则取消
-                else if (!inputField.isFocused)
+                if (!inputField.isFocused && !Input.GetKey(KeyCode.Return) && !Input.GetKey(KeyCode.KeypadEnter))
                 {
                     OnInputFieldCancel?.Invoke(value, inputField.caretPosition);
                     inputField.text = "";
@@ -425,6 +433,9 @@ namespace GhostPlayer.GHud
             }
         }
 
+        // 用于防止重复激活的标志
+        private bool isProcessingEnterKey = false;
+
         /// <summary>
         /// 更新输入框状态
         /// </summary>
@@ -434,6 +445,18 @@ namespace GhostPlayer.GHud
             {
                 bool origInputLock = LockInput;
                 LockInput = false;
+                
+                // 处理ESC键
+                if (Input.GetKeyDown(KeyCode.Escape) && activated)
+                {
+                    OnInputFieldCancel?.Invoke(currentInputString, inputField.caretPosition);
+                    currentInputString = "";
+                    inputField.text = "";
+                    inputField.DeactivateInputField();
+                    activated = false;
+                    LockInput = false;
+                    return;
+                }
                 
                 // 如果输入框失去焦点且之前是激活的，则取消输入
                 if (!inputField.isFocused && activated && !Input.GetKey(KeyCode.Return) && !Input.GetKey(KeyCode.KeypadEnter))
@@ -445,8 +468,21 @@ namespace GhostPlayer.GHud
                 }
 
                 // 处理回车键按下事件
-                if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+                bool enterKeyDown = Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter);
+                bool enterKeyUp = Input.GetKeyUp(KeyCode.Return) || Input.GetKeyUp(KeyCode.KeypadEnter);
+
+                // 如果正在处理回车键且按键已释放，重置状态
+                if (isProcessingEnterKey && enterKeyUp)
                 {
+                    isProcessingEnterKey = false;
+                    return;
+                }
+
+                // 只在按下回车键时处理，并设置处理标志
+                if (enterKeyDown && !isProcessingEnterKey)
+                {
+                    isProcessingEnterKey = true;
+                    
                     // 如果输入框已激活
                     if (activated)
                     {
@@ -458,23 +494,25 @@ namespace GhostPlayer.GHud
                             currentInputString = "";
                             inputField.DeactivateInputField();
                             activated = false;
-                            origInputLock = false;
+                            LockInput = false;
                         }
                         // 如果没有输入内容，则取消
                         else
                         {
+                            OnInputFieldCancel?.Invoke(currentInputString, inputField.caretPosition);
                             currentInputString = "";
                             inputField.text = "";
-                            inputField.DeactivateInputField();
-                            OnInputFieldCancel?.Invoke(currentInputString, inputField.caretPosition);
                             activated = false;
-                            origInputLock = false;
+                            inputField.DeactivateInputField();
+                            LockInput = false;
                         }
                     }
-                    // 如果输入框未激活，则激活
-                    else
+                    // 如果输入框未激活且在线，则激活
+                    else if (MatchmakingManager.currentInstance != null)
                     {
                         OnInputFieldFocus?.Invoke(currentInputString, inputField.caretPosition);
+                        inputField.transform.position = new Vector3(80f, 80f, 0f);
+                        inputField.GetComponent<RectTransform>().sizeDelta = new Vector2(400f, 30f);
                         inputField.ActivateInputField();
                         inputField.Select();
                         activated = true;
@@ -487,6 +525,63 @@ namespace GhostPlayer.GHud
             catch (Exception ex)
             {
                 Debug.LogError("[雨甸中文输入] 更新输入框状态失败: " + ex.Message);
+                Debug.LogException(ex);
+            }
+        }
+
+        /// <summary>
+        /// 激活输入框
+        /// </summary>
+        public void ActivateInputField()
+        {
+            try
+            {
+                // 检查是否在线
+                if (MatchmakingManager.currentInstance == null)
+                {
+                    UnityEngine.Debug.Log("[雨甸中文输入] 未在线，不能打开聊天框");
+                    return;
+                }
+
+                // 检查输入框是否存在
+                if (inputField == null)
+                {
+                    UnityEngine.Debug.LogError("[雨甸中文输入] 输入框不存在，无法激活");
+                    return;
+                }
+
+                Debug.Log("[雨甸中文输入] 激活输入框");
+                
+                // 如果输入框已经激活，则不处理
+                if (activated)
+                {
+                    Debug.Log("[雨甸中文输入] 输入框已经激活");
+                    return;
+                }
+
+                // 确保没有其他激活的输入框
+                var allInputFields = FindObjectsOfType<InputField>();
+                foreach (var field in allInputFields)
+                {
+                    if (field != inputField && field.isFocused)
+                    {
+                        field.DeactivateInputField();
+                    }
+                }
+                
+                // 设置输入框位置和大小
+                inputField.transform.position = new Vector3(80f, 80f, 0f);
+                inputField.GetComponent<RectTransform>().sizeDelta = new Vector2(400f, 30f);
+                
+                // 激活输入框
+                activated = true;
+                inputField.ActivateInputField();
+                
+                Debug.Log("[雨甸中文输入] 输入框已激活");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError("[雨甸中文输入] 激活输入框失败: " + ex.Message);
                 Debug.LogException(ex);
             }
         }

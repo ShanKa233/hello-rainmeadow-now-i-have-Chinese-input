@@ -13,6 +13,8 @@ using System.Collections.Generic;
 using System.Collections;
 using GhostPlayer;
 using MonoMod.RuntimeDetour;
+using GhostPlayer.GHud;
+using static Player;
 
 #pragma warning disable CS0618
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
@@ -67,6 +69,10 @@ namespace GoodMorningRainMeadow
 				// 初始化ChatLogManager Hook
 				ChatLogManagerHook.Initialize(Logger);
 				DebugHandler.Log("已初始化ChatLogManager Hook");
+
+				// 添加Player.Update的Hook
+				On.Player.Update += Player_Update;
+				DebugHandler.Log("已添加Player输入Hook");
 			}
 			catch (Exception ex)
 			{
@@ -79,6 +85,36 @@ namespace GoodMorningRainMeadow
 			On.RainWorldGame.ctor += RainWorldGame_ctor;
 			
 			DebugHandler.Log("雨甸中文输入已初始化");
+		}
+		
+		private void Player_Update(On.Player.orig_Update orig, Player self, bool eu)
+		{
+			// 如果输入框激活，则禁用玩家输入
+			if (GHUD.Instance != null && GHUD.Instance.LockInput)
+			{
+				// 保存原始输入状态
+				var origInput = self.input[0];
+				// 清空输入
+				self.input[0] = new InputPackage(
+					false, // jmp
+					Options.ControlSetup.Preset.None, // crouchToggle
+					0, // x
+					0, // y
+					false, // thrw
+					false, // pckp
+					false, // map
+					false, // mp
+					false // custom
+				);
+				// 调用原始更新方法
+				orig(self, eu);
+				// 恢复输入状态
+				self.input[0] = origInput;
+			}
+			else
+			{
+				orig(self, eu);
+			}
 		}
 		
 		private void RainWorldGame_ctor(On.RainWorldGame.orig_ctor orig, RainWorldGame self, ProcessManager manager)

@@ -117,6 +117,7 @@ namespace GhostPlayer.GHud
             // 订阅输入框事件
             hud.OnInputFieldFocus += Hud_OnInputFieldFocus;
             hud.OnInputFieldChanged += Hud_OnInputFieldChanged;
+
             hud.OnInputFieldSubmit += Hud_OnInputFieldClose;
             hud.OnInputFieldCancel += Hud_OnInputFieldClose;
 
@@ -273,6 +274,7 @@ namespace GhostPlayer.GHud
             lastInputText = value;
             // 隐藏输入框
             setShow = 0f;
+            // show = 0f;
         }
 
         /// <summary>

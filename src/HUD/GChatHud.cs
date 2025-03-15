@@ -111,19 +111,22 @@ namespace GhostPlayer.GHud
                 var playerManager = MatchmakingManager.currentInstance;
                 try
                 {
-                    var selfPlayerField = playerManager.GetType().GetField("selfLobbyPlayer", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                    // 获取selfPlayer对象
+                    var selfPlayerField = playerManager.GetType().GetField("selfPlayer", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
                     if (selfPlayerField != null)
                     {
                         var selfPlayer = selfPlayerField.GetValue(playerManager);
                         if (selfPlayer != null)
                         {
-                            var nameProperty = selfPlayer.GetType().GetProperty("name");
-                            if (nameProperty != null)
+                            // 尝试获取playerID
+                            var playerIDField = selfPlayer.GetType().GetField("playerID", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+                            if (playerIDField != null)
                             {
-                                var name = nameProperty.GetValue(selfPlayer) as string;
-                                if (!string.IsNullOrEmpty(name))
+                                var playerID = playerIDField.GetValue(selfPlayer);
+                                if (playerID != null)
                                 {
-                                    playerName = name;
+                                    playerName = playerID.ToString();
+                                    DebugHandler.Log($"[雨甸中文输入] 成功获取玩家ID: {playerName}");
                                 }
                             }
                         }
@@ -131,13 +134,15 @@ namespace GhostPlayer.GHud
                 }
                 catch (Exception ex)
                 {
-                    DebugHandler.LogWarning($"[雨甸中文输入] 通过反射获取玩家名称失败: {ex.Message}");
+                    DebugHandler.LogWarning($"[雨甸中文输入] 通过反射获取玩家ID失败: {ex.Message}");
                 }
             }
 
-            // 创建新的聊天消息
-            NewChatLine($"[{playerName}]", value, (value.Length) * 4 + 240,
-                online ? GHUDStatic.GHUDgreen : GHUDStatic.GHUDyellow);
+            // 如果不在线，直接显示本地消息
+            if (!online)
+            {
+                NewChatLine($"[{playerName}]", value, (value.Length) * 4 + 240, GHUDStatic.GHUDyellow);
+            }
 
             // 使用Rain Meadow的系统发送消息
             if (online)
@@ -152,16 +157,16 @@ namespace GhostPlayer.GHud
                 {
                     DebugHandler.LogError($"[雨甸中文输入] 发送消息时遇到KeyNotFoundException: {knfEx.Message}");
                     Debug.LogException(knfEx);
+                    // 发送失败时显示本地消息
+                    NewChatLine($"[{playerName}]", value, (value.Length) * 4 + 240, GHUDStatic.GHUDyellow);
                 }
                 catch (Exception ex)
                 {
                     DebugHandler.LogError($"[雨甸中文输入] 发送消息失败: {ex.Message}");
                     Debug.LogException(ex);
+                    // 发送失败时显示本地消息
+                    NewChatLine($"[{playerName}]", value, (value.Length) * 4 + 240, GHUDStatic.GHUDyellow);
                 }
-            }
-            else
-            {
-                DebugHandler.Log("[雨甸中文输入] 不在线状态，仅显示本地消息");
             }
         }
 
@@ -241,18 +246,39 @@ namespace GhostPlayer.GHud
             {
                 Debug.Log($"[雨甸中文输入] GChatHud.AddMessage被调用: 用户={username}, 消息={message}");
                 
-                // 特殊处理系统消息
+                // 添加空值检查
                 if (string.IsNullOrEmpty(username))
                 {
-                    Debug.Log("[雨甸中文输入] 处理系统消息");
-                    
-                    NewChatLine("", message, message.Length * 4 + 240, GHUDStatic.GHUDyellow);
+                    username = "系统";
+                    Debug.LogWarning("[雨甸中文输入] 收到空用户名的消息，使用默认名称");
                 }
-                else
+                
+                if (string.IsNullOrEmpty(message))
                 {
-                    Debug.Log($"[雨甸中文输入] 处理用户消息: [{username}]");
-                    NewChatLine($"[{username}]", message, (username.Length + message.Length) * 4 + 240, Color.white);
+                    Debug.LogWarning("[雨甸中文输入] 收到空消息内容，忽略此消息");
+                    return;
                 }
+
+                // 根据消息内容选择颜色
+                Color messageColor = GHUDStatic.GHUDwhite; // 默认白色
+
+                // 击杀消息使用红色
+                if (message.Contains("killed") || message.Contains("slain") || message.Contains("died") || message.Contains("死亡"))
+                {
+                    messageColor = GHUDStatic.GHUDred;
+                }
+                // 进入房间消息使用绿色
+                else if (message.Contains("entered") || message.Contains("进入") || message.Contains("joined") || message.Contains("加入"))
+                {
+                    messageColor = GHUDStatic.GHUDgreen;
+                }
+                // 离开房间消息使用橙色
+                else if (message.Contains("left") || message.Contains("离开") || message.Contains("quit") || message.Contains("退出"))
+                {
+                    messageColor = new Color(1f, 0.6f, 0f); // 橙色
+                }
+
+                NewChatLine($"[{username}]", message, message.Length * 4 + 240, messageColor);
             }
             catch (Exception ex)
             {
@@ -560,70 +586,6 @@ namespace GhostPlayer.GHud
                     Debug.LogError("[雨甸中文输入] 取消订阅ChatLogManager失败: " + ex.Message);
                 }
             }
-
-            /// <summary>
-            /// 处理消息
-            /// </summary>
-            /// <param name="user">用户名</param>
-            /// <param name="message">消息内容</param>
-            public void HandleMessage(string user, string message)
-            {
-                try
-                {
-                    Debug.Log($"[雨甸中文输入] GChatHudAdapter.HandleMessage被调用: 用户={user}, 消息={message}");
-                    
-                    // 添加空值检查
-                    if (string.IsNullOrEmpty(user))
-                    {
-                        user = "系统";
-                        Debug.LogWarning("[雨甸中文输入] 收到空用户名的消息，使用默认名称");
-                    }
-                    
-                    if (string.IsNullOrEmpty(message))
-                    {
-                        Debug.LogWarning("[雨甸中文输入] 收到空消息内容，忽略此消息");
-                        return;
-                    }
-                    
-                    if (gChatHud != null)
-                    {
-                        Debug.Log("[雨甸中文输入] gChatHud不为空");
-                        
-                        if (!gChatHud.slatedForDeletion)
-                        {
-                            Debug.Log("[雨甸中文输入] gChatHud未标记为删除，转发消息");
-                            try
-                            {
-                                gChatHud.AddMessage(user, message);
-                                Debug.Log($"[雨甸中文输入] 消息已转发: {user}: {message}");
-                            }
-                            catch (KeyNotFoundException knfEx)
-                            {
-                                Debug.LogError($"[雨甸中文输入] 转发消息时遇到KeyNotFoundException: {knfEx.Message}");
-                                Debug.LogException(knfEx);
-                            }
-                        }
-                        else
-                        {
-                            Debug.LogWarning("[雨甸中文输入] gChatHud已标记为删除，无法转发消息");
-                        }
-                    }
-                    else
-                    {
-                        Debug.LogError("[雨甸中文输入] gChatHud为空，无法转发消息");
-                    }
-                }
-                catch (KeyNotFoundException knfEx)
-                {
-                    Debug.LogError($"[雨甸中文输入] 处理消息时遇到KeyNotFoundException: {knfEx.Message}");
-                    Debug.LogException(knfEx);
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogError("[雨甸中文输入] 转发消息失败: " + ex.Message);
-                    Debug.LogException(ex);
-                }
-            }
         }
         
         /// <summary>
@@ -649,18 +611,13 @@ namespace GhostPlayer.GHud
                     UnityEngine.Debug.Log($"[雨甸中文输入] ChatHudProxy.AddMessage被调用: 用户={user}, 消息={message}");
                     
                     // 添加额外的空值检查
-                    if (adapter == null)
+                    if (adapter == null || adapter.gChatHud == null)
                     {
-                        UnityEngine.Debug.LogError("[雨甸中文输入] ChatHudProxy.adapter为空");
+                        UnityEngine.Debug.LogError("[雨甸中文输入] ChatHudProxy.adapter或gChatHud为空");
                         return;
                     }
                     
-                    adapter.HandleMessage(user, message);
-                }
-                catch (KeyNotFoundException knfEx)
-                {
-                    UnityEngine.Debug.LogError($"[雨甸中文输入] ChatHudProxy处理消息时遇到KeyNotFoundException: {knfEx.Message}");
-                    UnityEngine.Debug.LogException(knfEx);
+                    adapter.gChatHud.AddMessage(user, message);
                 }
                 catch (Exception ex)
                 {

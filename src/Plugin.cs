@@ -32,18 +32,18 @@ namespace GoodMorningRainMeadow
 		{
 			instance = this;
 			logger = Logger;
-			
+
 			// 初始化调试处理器
 			DebugHandler.Initialize(Logger);
-			
+
 			// 初始化配置管理器
 			ConfigManager.Initialize(Config);
-			
+
 			DebugHandler.Log("雨甸中文输入补丁已加载");
-			
+
 			On.RainWorld.OnModsInit += RainWorld_OnModsInit;
 		}
-		
+
 		public void OnDisable()
 		{
 			// 清理ChatHud Hook
@@ -51,17 +51,17 @@ namespace GoodMorningRainMeadow
 			// 清理ChatLogManager Hook
 			ChatLogManagerHook.Cleanup();
 		}
-		
+
 		private void RainWorld_OnModsInit(On.RainWorld.orig_OnModsInit orig, RainWorld self)
 		{
 			orig(self);
-			
+
 			// 初始化引用
 			try
 			{
 				References.Initialize();
 				DebugHandler.Log("已初始化程序集引用");
-				
+
 				// 初始化ChatHud Hook
 				ChatHudHook.Initialize(Logger);
 				DebugHandler.Log("已初始化ChatHud Hook");
@@ -70,30 +70,50 @@ namespace GoodMorningRainMeadow
 				ChatLogManagerHook.Initialize(Logger);
 				DebugHandler.Log("已初始化ChatLogManager Hook");
 
-				// 添加Player.Update的Hook
-				On.Player.Update += Player_Update;
-				DebugHandler.Log("已添加Player输入Hook");
+				// 添加输入相关的Hook
+				On.Player.checkInput += Player_checkInput;
+				On.RWInput.PlayerUIInput_int += PlayerUIInput_int;
 			}
 			catch (Exception ex)
 			{
 				DebugHandler.LogError("初始化过程中发生错误", ex);
 				return;
 			}
-			
+
 			// 注册按键事件
 			On.RainWorldGame.Update += RainWorldGame_Update;
 			On.RainWorldGame.ctor += RainWorldGame_ctor;
 			
 			DebugHandler.Log("雨甸中文输入已初始化");
 		}
-		
-		private void Player_Update(On.Player.orig_Update orig, Player self, bool eu)
-		{
-			// 如果输入框激活，则禁用玩家输入
-			if (GHUD.Instance != null && GHUD.Instance.LockInput)
+
+        private InputPackage PlayerUIInput_int(On.RWInput.orig_PlayerUIInput_int orig, int playerNumber)
+        {
+			bool shouldLockInput = GHUD.Instance != null && GHUD.Instance.LockInput;
+			if (shouldLockInput)
 			{
-				// 保存原始输入状态
-				var origInput = self.input[0];
+				// 清空输入
+				return new InputPackage(
+					false, // jmp
+					Options.ControlSetup.Preset.None, // crouchToggle
+					0, // x
+					0, // y
+					false, // thrw
+					false, // pckp
+					false, // map
+					false, // mp
+					false // custom
+				);
+			}
+            return orig(playerNumber);
+        }
+
+        private void Player_checkInput(On.Player.orig_checkInput orig, Player self)
+		{
+			orig(self);
+			bool shouldLockInput = GHUD.Instance != null && GHUD.Instance.LockInput;
+			if (shouldLockInput)
+			{
 				// 清空输入
 				self.input[0] = new InputPackage(
 					false, // jmp
@@ -106,21 +126,12 @@ namespace GoodMorningRainMeadow
 					false, // mp
 					false // custom
 				);
-				// 调用原始更新方法
-				orig(self, eu);
-				// 恢复输入状态
-				self.input[0] = origInput;
-			}
-			else
-			{
-				orig(self, eu);
 			}
 		}
-		
 		private void RainWorldGame_ctor(On.RainWorldGame.orig_ctor orig, RainWorldGame self, ProcessManager manager)
 		{
 			orig(self, manager);
-			
+
 			// 创建GHUDTest实例，用于初始化GHUD
 			try
 			{
@@ -134,7 +145,7 @@ namespace GoodMorningRainMeadow
 				DebugHandler.LogError("创建GHUDTest实例失败", ex);
 			}
 		}
-		
+
 		private void RainWorldGame_Update(On.RainWorldGame.orig_Update orig, RainWorldGame self)
 		{
 			orig(self);

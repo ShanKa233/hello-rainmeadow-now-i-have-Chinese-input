@@ -1,8 +1,8 @@
 using System;
-using MonoMod.RuntimeDetour;
 using System.Reflection;
 using BepInEx.Logging;
 using GhostPlayer.GHud;
+using MonoMod.RuntimeDetour;
 
 namespace GoodMorningRainMeadow
 {

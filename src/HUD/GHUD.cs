@@ -11,6 +11,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using Random = UnityEngine.Random;
 using RainMeadow;
+using System.Collections;
 
 namespace GhostPlayer.GHud
 {
@@ -126,6 +127,32 @@ namespace GhostPlayer.GHud
 
         #region UnityFunc
         /// <summary>
+        /// Unity Awake函数，在Start之前调用，用于初始化单例
+        /// </summary>
+        void Awake()
+        {
+            try
+            {
+                // 检查是否已存在GHUD实例
+                if (Instance != null && Instance != this)
+                {
+                    Debug.Log("[雨甸中文输入] 检测到多个GHUD实例，销毁当前实例");
+                    Destroy(gameObject);
+                    return;
+                }
+
+                // 设置单例实例
+                Instance = this;
+                Debug.Log($"[雨甸中文输入] GHUD实例初始化，实例ID: {GetInstanceID()}");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError("[雨甸中文输入] GHUD Awake失败: " + ex.Message);
+                Debug.LogException(ex);
+            }
+        }
+
+        /// <summary>
         /// Unity启动函数，初始化GHUD系统
         /// </summary>
         void Start()
@@ -134,8 +161,6 @@ namespace GhostPlayer.GHud
             {
                 Debug.Log("[雨甸中文输入] GHUD开始初始化");
 
-                // 设置单例实例
-                Instance = this;
                 // 获取雨世界实例
                 rainWorld = Custom.rainWorld;
 
@@ -177,6 +202,53 @@ namespace GhostPlayer.GHud
         }
 
         /// <summary>
+        /// Unity OnDestroy函数，在对象销毁时调用，用于清理资源
+        /// </summary>
+        void OnDestroy()
+        {
+            try
+            {
+                Debug.Log("[雨甸中文输入] GHUD开始销毁");
+
+                // 如果当前实例是单例实例，则重置单例
+                if (Instance == this)
+                {
+                    Instance = null;
+                }
+
+                // 清理所有HUD部件
+                if (parts != null)
+                {
+                    foreach (var part in parts)
+                    {
+                        part.ClearSprites();
+                    }
+                    parts.Clear();
+                }
+
+                // 移除输入框事件监听
+                if (inputField != null)
+                {
+                    inputField.onValueChanged.RemoveAllListeners();
+                    inputField.onEndEdit.RemoveAllListeners();
+                }
+
+                // 移除Futile容器
+                if (container != null)
+                {
+                    container.RemoveFromContainer();
+                }
+
+                Debug.Log("[雨甸中文输入] GHUD销毁完成");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError("[雨甸中文输入] GHUD销毁失败: " + ex.Message);
+                Debug.LogException(ex);
+            }
+        }
+
+        /// <summary>
         /// 检查必要的程序集是否已加载
         /// </summary>
         private void CheckRequiredAssemblies()
@@ -209,6 +281,9 @@ namespace GhostPlayer.GHud
         {
             try
             {
+                // 检查游戏场景是否已切换
+                CheckGameState();
+                
                 // 更新输入框状态
                 InputFieldUpdate();
 
@@ -233,6 +308,53 @@ namespace GhostPlayer.GHud
                 UnityEngine.Debug.LogError("[雨甸中文输入] GHUD更新失败: " + ex.Message);
                 UnityEngine.Debug.LogException(ex);
             }
+        }
+
+        /// <summary>
+        /// 检查游戏状态，如果不在游戏场景中则销毁GHUD
+        /// </summary>
+        private void CheckGameState()
+        {
+            try
+            {
+                // 获取当前进程
+                var currentProcess = Custom.rainWorld?.processManager?.currentMainLoop;
+                
+                // 如果不在游戏内且GHUD实例存在，则销毁GHUD
+                if (!(currentProcess is RainWorldGame) && Instance == this)
+                {
+                    Debug.Log("[雨甸中文输入] 检测到游戏场景已切换，销毁GHUD实例");
+                    
+                    // 清理资源
+                    if (inputField != null)
+                    {
+                        // 确保输入框不再活跃
+                        if (activated)
+                        {
+                            inputField.DeactivateInputField();
+                            activated = false;
+                            LockInput = false;
+                        }
+                    }
+                    
+                    // 延迟销毁，避免在Update中直接销毁对象
+                    StartCoroutine(DelayedDestroy());
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError("[雨甸中文输入] 检查游戏状态失败: " + ex.Message);
+                Debug.LogException(ex);
+            }
+        }
+        
+        /// <summary>
+        /// 延迟销毁GHUD实例
+        /// </summary>
+        private IEnumerator DelayedDestroy()
+        {
+            yield return null; // 等待一帧
+            Destroy(gameObject);
         }
         #endregion
 
@@ -342,25 +464,30 @@ namespace GhostPlayer.GHud
                 Debug.Log("[雨甸中文输入] 开始设置输入框");
 
                 // 检查是否已存在输入框
-                var existingInputField = GameObject.Find("GHUDInputField");
-                if (existingInputField != null)
+                var existingInputFields = FindObjectsOfType<InputField>().Where(f => f.gameObject.name == "GHUDInputField").ToArray();
+                
+                // 如果存在多个输入框，删除除第一个以外的所有输入框
+                if (existingInputFields.Length > 1)
                 {
-                    Debug.Log("[雨甸中文输入] 已存在输入框，使用现有输入框");
-                    inputField = existingInputField.GetComponent<InputField>();
-                    if (inputField != null)
+                    Debug.Log($"[雨甸中文输入] 检测到{existingInputFields.Length}个输入框，保留第一个，删除其余的");
+                    for (int i = 1; i < existingInputFields.Length; i++)
                     {
-                        // 重新设置事件监听
-                        inputField.onValueChanged.RemoveAllListeners();
-                        inputField.onEndEdit.RemoveAllListeners();
-                        inputField.onValueChanged.AddListener(ListenChange);
-                        inputField.onEndEdit.AddListener(OnEndEdit);
-                        return;
+                        Destroy(existingInputFields[i].gameObject);
                     }
-                    else
-                    {
-                        Debug.Log("[雨甸中文输入] 现有输入框组件无效，删除后重新创建");
-                        Destroy(existingInputField);
-                    }
+                }
+
+                // 如果存在至少一个输入框，使用它
+                if (existingInputFields.Length > 0)
+                {
+                    Debug.Log("[雨甸中文输入] 使用现有输入框");
+                    inputField = existingInputFields[0];
+                    
+                    // 重新设置事件监听
+                    inputField.onValueChanged.RemoveAllListeners();
+                    inputField.onEndEdit.RemoveAllListeners();
+                    inputField.onValueChanged.AddListener(ListenChange);
+                    inputField.onEndEdit.AddListener(OnEndEdit);
+                    return;
                 }
 
                 // 创建输入框游戏对象
@@ -457,7 +584,8 @@ namespace GhostPlayer.GHud
                     currentInputString = "";
                     inputField.DeactivateInputField();
                     activated = false;
-                    LockInput = false;
+                    // 添加一个短暂的延迟再解除输入锁定
+                    StartCoroutine(DelayedUnlock());
                 }
             }
             catch (Exception ex)
@@ -465,6 +593,12 @@ namespace GhostPlayer.GHud
                 Debug.LogError("[雨甸中文输入] 处理输入框结束编辑失败: " + ex.Message);
                 Debug.LogException(ex);
             }
+        }
+
+        private IEnumerator DelayedUnlock()
+        {
+            yield return new WaitForSeconds(0.1f);
+            LockInput = false;
         }
 
         // 用于防止重复激活的标志
@@ -488,7 +622,7 @@ namespace GhostPlayer.GHud
                     inputField.text = "";
                     inputField.DeactivateInputField();
                     activated = false;
-                    LockInput = false;
+                    StartCoroutine(DelayedUnlock());
                     return;
                 }
 
@@ -499,6 +633,7 @@ namespace GhostPlayer.GHud
                     currentInputString = "";
                     inputField.text = "";
                     activated = false;
+                    StartCoroutine(DelayedUnlock());
                 }
 
                 // 处理回车键按下事件
@@ -528,7 +663,7 @@ namespace GhostPlayer.GHud
                             currentInputString = "";
                             inputField.DeactivateInputField();
                             activated = false;
-                            LockInput = false;
+                            StartCoroutine(DelayedUnlock());
                         }
                         // 如果没有输入内容，则取消
                         else
@@ -538,7 +673,7 @@ namespace GhostPlayer.GHud
                             inputField.text = "";
                             activated = false;
                             inputField.DeactivateInputField();
-                            LockInput = false;
+                            StartCoroutine(DelayedUnlock());
                         }
                     }
                     // 如果输入框未激活且可以激活，则激活

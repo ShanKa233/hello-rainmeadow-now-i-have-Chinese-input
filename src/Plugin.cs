@@ -83,9 +83,39 @@ namespace GoodMorningRainMeadow
 			// 注册按键事件
 			On.RainWorldGame.Update += RainWorldGame_Update;
 			On.RainWorldGame.ctor += RainWorldGame_ctor;
+			On.MainLoopProcess.RawUpdate += MainLoopProcess_RawUpdate;
 			
 			DebugHandler.Log("雨甸中文输入已初始化");
 		}
+
+        private void MainLoopProcess_RawUpdate(On.MainLoopProcess.orig_RawUpdate orig, MainLoopProcess self, float dt)
+        {
+            orig(self, dt);
+            if (GHUD.Instance != null)
+            {
+                // 检查是否打开了输入框
+                if (GHUD.Instance.LockInput)
+                {
+                    // 如果打开了输入框，关闭devToolsActive
+                    if (self is RainWorldGame game && game.devToolsActive)
+                    {
+                        game.devToolsActive = false;
+						game.devToolsLabel.isVisible = false;
+                        DebugHandler.Log("[雨甸中文输入] 检测到输入框打开，已关闭开发者工具");
+                    }
+                    
+                    // 如果打开了输入框，关闭devUI
+                    if (self is RainWorldGame rwGame && rwGame.devUI != null)
+                    {
+                        Cursor.visible = !Custom.rainWorld.options.fullScreen;
+                        rwGame.devUI.ClearSprites();
+                        rwGame.devUI = null;
+                        DebugHandler.Log("[雨甸中文输入] 检测到输入框打开，已关闭开发者UI");
+                    }
+                }
+            }
+        }
+
 
         private InputPackage PlayerUIInput_int(On.RWInput.orig_PlayerUIInput_int orig, int playerNumber)
         {

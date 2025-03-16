@@ -321,7 +321,7 @@ namespace GhostPlayer.GHud
                 var currentProcess = Custom.rainWorld?.processManager?.currentMainLoop;
                 
                 // 如果不在游戏内且GHUD实例存在，则销毁GHUD
-                if (!(currentProcess is RainWorldGame) && Instance == this)
+                if (!(currentProcess is RainWorldGame game) && Instance == this)
                 {
                     Debug.Log("[雨甸中文输入] 检测到游戏场景已切换，销毁GHUD实例");
                     
@@ -336,7 +336,6 @@ namespace GhostPlayer.GHud
                             LockInput = false;
                         }
                     }
-                    
                     // 延迟销毁，避免在Update中直接销毁对象
                     StartCoroutine(DelayedDestroy());
                 }

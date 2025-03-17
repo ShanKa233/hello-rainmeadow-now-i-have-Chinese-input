@@ -68,12 +68,6 @@ namespace GhostPlayer.GHud
         /// </summary>
         private List<ChatMessageRecord> messageHistory = new List<ChatMessageRecord>();
 
-        /// <summary>
-        /// 上一次isLogToggled的状态
-        /// </summary>
-        private bool lastLogToggled = false;
-
-
 
         /// <summary>
         /// 玩家颜色字典，用于存储玩家名称与对应的颜色
@@ -166,7 +160,7 @@ namespace GhostPlayer.GHud
             // 如果不在线，直接显示本地消息
             if (!online)
             {
-                NewChatLine($"[{playerName}]", value, (value.Length) * 4 + 240, GHUDStatic.GHUDyellow);
+                NewChatLine($"[{playerName}]", value, GHUDStatic.GHUDyellow);
             }
 
             // 使用Rain Meadow的系统发送消息
@@ -183,14 +177,14 @@ namespace GhostPlayer.GHud
                     DebugHandler.LogError($"[雨甸中文输入] 发送消息时遇到KeyNotFoundException: {knfEx.Message}");
                     Debug.LogException(knfEx);
                     // 发送失败时显示本地消息
-                    NewChatLine($"[{playerName}]", value, (value.Length) * 4 + 240, GHUDStatic.GHUDyellow);
+                    NewChatLine($"[{playerName}]", value, GHUDStatic.GHUDyellow);
                 }
                 catch (Exception ex)
                 {
                     DebugHandler.LogError($"[雨甸中文输入] 发送消息失败: {ex.Message}");
                     Debug.LogException(ex);
                     // 发送失败时显示本地消息
-                    NewChatLine($"[{playerName}]", value, (value.Length) * 4 + 240, GHUDStatic.GHUDyellow);
+                    NewChatLine($"[{playerName}]", value, GHUDStatic.GHUDyellow);
                 }
             }
         }
@@ -200,17 +194,6 @@ namespace GhostPlayer.GHud
         /// </summary>
         public override void Update()
         {
-            // 如果历史消息显示被禁用，确保所有历史消息都被移除
-            if (!isHistoryEnabled)
-            {
-                for (int i = lines.Count - 1; i >= 0; i--)
-                {
-                    if (lines[i].IsHistoryMessage)
-                    {
-                        lines[i].ForceDestroy();
-                    }
-                }
-            }
 
             // 控制消息的显示和消失
             ManageMessageDisplay();
@@ -255,70 +238,24 @@ namespace GhostPlayer.GHud
         /// </summary>
         private void ManageMessageDisplay()
         {
-            // 获取所有非历史消息
-            var nonHistoryMessages = lines.Where(l => !l.IsHistoryMessage).ToList();
-
-            // 如果没有非历史消息，直接返回
-            if (nonHistoryMessages.Count == 0)
-                return;
-
             // 减少删除延迟计时器
-            if (nextDelateDelay > 0)
+            if (nextDelateDelay <= 0)
             {
-                nextDelateDelay -= 1f;
-                
-                // 当计时器归零时，删除最顶部的消息
-                if (nextDelateDelay <= 0)
+                // 获取最早加入的消息
+                if (lines.Count > 0)
                 {
-                    // 如果显示历史消息，则删除最顶部的历史消息
-                    if (isHistoryEnabled && messageHistory.Count > 0)
+                    var oldestLine = lines[0];
+                    if (!oldestLine.markedForDestroy)
                     {
-                        // 查找最顶部的历史消息
-                        var historyMessages = lines.Where(l => l.IsHistoryMessage).ToList();
-                        if (historyMessages.Count > 0)
-                        {
-                            var oldestHistoryMessage = historyMessages[0];
-                            oldestHistoryMessage.ForceDestroy();
-                            DebugHandler.Log("[雨甸中文输入] 计时器到期，删除了最顶部的历史消息");
-                            
-                            // 从历史记录中也删除这条消息
-                            if (messageHistory.Count > 0)
-                            {
-                                messageHistory.RemoveAt(0);
-                                DebugHandler.Log("[雨甸中文输入] 从历史记录中删除了最顶部的消息");
-                            }
-                            
-                            // 重置计时器，如果还有历史消息，则基于下一条消息的长度
-                            if (messageHistory.Count > 0)
-                            {
-                                var nextOldestMessage = messageHistory[0];
-                                nextDelateDelay = Math.Max(10f, nextOldestMessage.Message.Length * 2f + 50f);
-                            }
-                            else
-                            {
-                                nextDelateDelay = 10f;
-                            }
-                            DebugHandler.Log($"[雨甸中文输入] 重置删除计时器为: {nextDelateDelay}");
-                        }
-                    }
-                    // 否则删除最顶部的普通消息
-                    else if (nonHistoryMessages.Count > 0)
-                    {
-                        // 获取最顶部的消息（最老的消息）
-                        var oldestMessage = nonHistoryMessages[0];
-                        oldestMessage.ForceDestroy();
-                        DebugHandler.Log("[雨甸中文输入] 计时器到期，删除了最顶部的普通消息");
-                        
-                        // 重置计时器为之前的一半，最少为10
-                        if (nonHistoryMessages.Count > 1)
-                        {
-                            nextDelateDelay = Math.Max(10f, nextDelateDelay / 2f);
-                            DebugHandler.Log($"[雨甸中文输入] 重置删除计时器为: {nextDelateDelay}");
-                        }
+                        oldestLine.Destroy();
                     }
                 }
+                return;
             }
+
+            nextDelateDelay -= 1f;
         }
+
 
         /// <summary>
         /// 切换历史消息显示状态
@@ -336,20 +273,12 @@ namespace GhostPlayer.GHud
             }
             else
             {
-                // 禁用历史消息显示
-                HideHistoryMessages();
 
                 // 确保所有历史消息都被立即移除
-                for (int i = lines.Count - 1; i >= 0; i--)
+                for (int i = 0; i < lines.Count; i++)
                 {
-                    if (lines[i].IsHistoryMessage)
-                    {
                         lines[i].ForceDestroy();
-                        DebugHandler.Log("[雨甸中文输入] 强制移除历史消息");
-                    }
                 }
-
-                DebugHandler.Log("[雨甸中文输入] 已禁用历史消息显示");
             }
 
             // 重新分配所有非历史消息的生命周期
@@ -361,26 +290,10 @@ namespace GhostPlayer.GHud
         /// </summary>
         private void ReallocateMessageLifecycles()
         {
-            // 获取所有非历史消息
-            var nonHistoryMessages = lines.Where(l => !l.IsHistoryMessage).ToList();
-
-            // 如果没有非历史消息，直接返回
-            if (nonHistoryMessages.Count == 0)
-                return;
-
-            // 按照在lines中的顺序（从老到新）重新分配生命周期
-            // 最老的消息（第一条）将最先消失
-            for (int i = 0; i < nonHistoryMessages.Count; i++)
+            foreach (var line in lines)
             {
-                var msg = nonHistoryMessages[i];
-                // 计算新的生命周期：基础生命周期 + 索引 * 20
-                // 这样每条消息之间的生命周期差距为20tick
-                int newLife = 240 + (i * 20);
-                msg.ResetLife(newLife);
-                DebugHandler.Log($"[雨甸中文输入] 重新分配消息生命周期: 索引 {i}, 新生命周期 {newLife}");
+                line.ResetLife();
             }
-
-            // 更新所有消息的位置
             UpdateLinePoses();
         }
 
@@ -395,6 +308,30 @@ namespace GhostPlayer.GHud
             // 清空当前所有消息
             lines.Clear();
 
+            // 添加历史消息
+            AddHistoryMessagesToDisplay();
+
+            // 设置删除计时器
+            SetupHistoryMessageTimer();
+
+            // 按照添加顺序（从老到新）添加当前消息
+            foreach (var msg in currentMessages)
+            {
+                lines.Add(msg);
+            }
+
+            // 更新所有消息的位置
+            UpdateLinePoses();
+
+            // 重新分配所有非历史消息的生命周期
+            ReallocateMessageLifecycles();
+        }
+
+        /// <summary>
+        /// 添加历史消息到显示列表
+        /// </summary>
+        private void AddHistoryMessagesToDisplay()
+        {
             // 按照时间顺序（从老到新）添加历史消息
             for (int i = 0; i < messageHistory.Count; i++)
             {
@@ -404,86 +341,41 @@ namespace GhostPlayer.GHud
                 historyLine.SetAsHistoryMessage();
                 lines.Add(historyLine);
             }
-            
-            // 根据最顶部消息的长度设置删除计时器
-            if (messageHistory.Count > 0)
-            {
-                var oldestMessage = messageHistory[0];
-                // 设置较长的计时器，确保历史消息不会立即消失
-                nextDelateDelay = oldestMessage.Message.Length * 3f + 100f;
-                DebugHandler.Log($"[雨甸中文输入] 显示历史消息时设置删除计时器为: {nextDelateDelay} (基于最顶部消息长度: {oldestMessage.Message.Length})");
-            }
-            else
-            {
-                nextDelateDelay = 200f;
-                DebugHandler.Log("[雨甸中文输入] 没有历史消息，设置默认计时器为: 200");
-            }
-            
-            // 按照添加顺序（从老到新）添加当前消息
-            foreach (var msg in currentMessages)
-            {
-                lines.Add(msg);
-            }
-
-            // 更新所有消息的位置
-            UpdateLinePoses();
-
-            // 重新分配所有非历史消息的生命周期
-            ReallocateMessageLifecycles();
         }
 
         /// <summary>
-        /// 隐藏历史消息
+        /// 设置历史消息的删除计时器
         /// </summary>
-        private void HideHistoryMessages()
+        private void SetupHistoryMessageTimer()
         {
-            // 先移除所有历史消息
-            for (int i = lines.Count - 1; i >= 0; i--)
+            // 根据最顶部消息的长度设置删除计时器
+            if (lines.Count > 0)
             {
-                if (lines[i].IsHistoryMessage)
-                {
-                    lines[i].ForceDestroy();
-                }
+                var oldestMessage = lines[lines.Count - 1];
+                // 设置较长的计时器，确保历史消息不会立即消失
+                nextDelateDelay = oldestMessage.message.text.Length * 3f + 100f;
+                return;
             }
-
-            // 保存当前的非历史消息
-            var currentMessages = lines.Where(l => !l.IsHistoryMessage).ToList();
-
-            // 清空当前所有消息
-            lines.Clear();
-
-            // 按照添加顺序（从老到新）添加当前消息
-            foreach (var msg in currentMessages)
-            {
-                lines.Add(msg);
-            }
-
-            // 更新所有消息的位置
-            UpdateLinePoses();
-
-            // 重新分配所有非历史消息的生命周期
-            ReallocateMessageLifecycles();
-
-            // 确保所有历史消息都被销毁
-            foreach (var historyMessage in messageHistory)
-            {
-                DebugHandler.Log($"[雨甸中文输入] 历史消息已隐藏: {historyMessage.Name} - {historyMessage.Message}");
-            }
+            // 如果没有历史消息，使用默认值
+            nextDelateDelay = 200f;
         }
+
 
         /// <summary>
         /// 添加消息到历史记录
         /// </summary>
         private void AddToHistory(string name, string message, Color color)
         {
-            // 如果历史记录已满，移除最早的消息
+            // 只有当历史记录已满时，才移除最早的消息
             if (messageHistory.Count >= MAX_HISTORY_MESSAGES)
             {
                 messageHistory.RemoveAt(0);
+                DebugHandler.Log("[雨甸中文输入] 历史记录已满，移除最早的消息");
             }
 
             // 添加新消息到历史记录
             messageHistory.Add(new ChatMessageRecord(name, message, color));
+            DebugHandler.Log($"[雨甸中文输入] 添加消息到历史记录: {name} - {message}");
         }
 
         /// <summary>
@@ -519,33 +411,13 @@ namespace GhostPlayer.GHud
         /// <param name="message">消息内容</param>
         /// <param name="life">消息显示时间</param>
         /// <param name="color">消息颜色</param>
-        public static void NewChatLine(string name, string message, int life, Color color)
+        public static void NewChatLine(string name, string message, Color color)
         {
             // 如果实例不存在，则不处理
             if (Instance == null)
                 return;
 
-            // 如果是历史消息（原来使用int.MaxValue），使用较长但有限的生命周期
-            bool isHistoryMessage = false;
-            if (life == int.MaxValue)
-            {
-                life = 600; // 约10秒
-                isHistoryMessage = true;
-            }
-            else
-            {
-                // 根据消息长度计算生命周期
-                life = message.Length * 4 + 240;
-                DebugHandler.Log($"[雨甸中文输入] 新消息生命周期: {life} (消息长度: {message.Length})");
-            }
-
             ChatLine newLine = new ChatLine(Instance, color, name, message);
-
-            // 如果是历史消息，设置标记
-            if (isHistoryMessage)
-            {
-                newLine.SetAsHistoryMessage();
-            }
 
             // 添加到消息列表
             Instance.lines.Add(newLine);
@@ -553,16 +425,9 @@ namespace GhostPlayer.GHud
             // 更新所有消息的位置
             Instance.UpdateLinePoses();
 
-            // 不再在这里添加到历史记录，而是在消息被删除时添加
-            // Instance.AddToHistory(name, message, color);
-            
             // 根据消息长度设置下次删除延迟
-            if (!isHistoryMessage)
-            {
-                // 设置删除计时器，基于消息长度
-                Instance.nextDelateDelay = message.Length * 3f + 60f;
-                DebugHandler.Log($"[雨甸中文输入] 设置删除计时器为: {Instance.nextDelateDelay} (基于消息长度: {message.Length})");
-            }
+            // 设置删除计时器，基于消息长度
+            Instance.nextDelateDelay = message.Length * 3f + 60f;
         }
 
         /// <summary>
@@ -615,7 +480,7 @@ namespace GhostPlayer.GHud
                     // 系统消息使用黄色，与ChatLogOverlay中的SYSTEM_COLOR一致
                     Color systemColor = new Color(1f, 1f, 0.3333333f);
                     // 系统消息不显示用户名前缀，直接显示消息内容
-                    NewChatLine("", message, message.Length * 4 + 240, systemColor);
+                    NewChatLine("", message, systemColor);
                     return;
                 }
 
@@ -649,14 +514,14 @@ namespace GhostPlayer.GHud
                     if (V < 0.8f) { colorNew = Color.HSVToRGB(H, S, 0.8f); }
 
                     // 创建新的聊天行
-                    NewChatLine($"[{username}]", message, message.Length * 4 + 240, colorNew);
+                    NewChatLine($"[{username}]", message, colorNew);
                     PlayMessageSound();
                 }
                 catch (Exception ex)
                 {
                     UnityEngine.Debug.LogWarning($"[雨甸中文输入] 获取玩家颜色失败: {ex.Message}");
                     // 使用默认白色创建聊天行
-                    NewChatLine($"[{username}]", message, message.Length * 4 + 240, GHUDStatic.GHUDwhite);
+                    NewChatLine($"[{username}]", message, GHUDStatic.GHUDwhite);
                     PlayMessageSound();
                 }
             }
@@ -689,7 +554,7 @@ namespace GhostPlayer.GHud
 
             // 透明度相关变量
             public float setAlpha;
-            float alpha;
+            public float alpha;
             float lastAlpha;
 
             // 生命周期相关变量
@@ -698,18 +563,27 @@ namespace GhostPlayer.GHud
             // 是否为历史消息
             public bool IsHistoryMessage { get; private set; }
 
+            // 是否已在历史列表中
+            private bool isInHistoryList = false;
+
+            // 是否已标记为待销毁
+            public bool markedForDestroy = false;
+
             // 位置相关变量
             Vector2 setPos;
             Vector2 pos;
             Vector2 lastPos;
 
             // UI元素
-            FLabel name;
-            FLabel message;
+            public FLabel name;
+            public FLabel message;
 
             // 延迟设置队列
             Queue<DelaySetting> delaySettings = new Queue<DelaySetting>();
             DelaySetting? currentDelaySetting;
+
+            // 销毁延迟计时器
+            private int destroyDelay = 30; // 约半秒的延迟
 
             /// <summary>
             /// 构造函数
@@ -756,12 +630,12 @@ namespace GhostPlayer.GHud
             /// 重置消息的生命周期
             /// </summary>
             /// <param name="newLife">新的生命周期</param>
-            public void ResetLife(int newLife)
+            public void ResetLife()
             {
+                markedForDestroy = false;
                 setAlpha = 1f;
                 alpha = 1f;
                 lastAlpha = 1f;
-                DebugHandler.Log($"[雨甸中文输入] 重置消息生命周期为 {newLife}");
             }
 
             /// <summary>
@@ -777,6 +651,54 @@ namespace GhostPlayer.GHud
                     return;
                 }
 
+                // 处理标记为待销毁的消息
+                if (markedForDestroy)
+                {
+                    HandleDestroyingMessage();
+                    return;
+                }
+
+                // 更新动画和位置
+                UpdateAnimationAndPosition();
+
+                // 处理延迟设置
+                HandleDelaySettings();
+
+                // 如果透明度几乎为0，且不是标记为待销毁的，则开始销毁流程
+                if (alpha < 0.01f && setAlpha < 0.01f && !markedForDestroy)
+                {
+                    Destroy();
+                }
+            }
+
+            /// <summary>
+            /// 处理正在销毁的消息
+            /// </summary>
+            private void HandleDestroyingMessage()
+            {
+                // 如果透明度已经接近0，则真正销毁
+                if (alpha < 0.05f)
+                {
+                    if (destroyDelay <= 0)
+                    {
+                        // 真正销毁消息
+                        ActualDestroy();
+                        return;
+                    }
+
+                    // 倒计时销毁延迟
+                    destroyDelay--;
+                }
+
+                // 继续更新动画
+                UpdateAnimationAndPosition();
+            }
+
+            /// <summary>
+            /// 更新动画和位置
+            /// </summary>
+            private void UpdateAnimationAndPosition()
+            {
                 // 平滑透明度变化
                 lastAlpha = alpha;
                 alpha = Mathf.Lerp(lastAlpha, setAlpha, 0.25f);
@@ -784,8 +706,14 @@ namespace GhostPlayer.GHud
                 // 平滑位置变化
                 lastPos = pos;
                 pos = Vector2.Lerp(lastPos, setPos, 0.15f);
+            }
 
-                // 处理延迟设置
+            /// <summary>
+            /// 处理延迟设置
+            /// </summary>
+            private void HandleDelaySettings()
+            {
+                // 处理延迟
                 if (delay > 0)
                 {
                     delay--;
@@ -807,12 +735,6 @@ namespace GhostPlayer.GHud
                     }
                     setPos = currentDelaySetting.Value.pos;
                     currentDelaySetting = null;
-                }
-
-                // 如果透明度几乎为0，则销毁
-                if (alpha < 0.01f && setAlpha < 0.01f)
-                {
-                    Destroy();
                 }
             }
 
@@ -883,33 +805,8 @@ namespace GhostPlayer.GHud
                 setAlpha = 0f;
                 alpha = 0f;
                 lastAlpha = 0f;
-
-                // 从容器中移除UI元素
-                if (name != null)
-                {
-                    name.RemoveFromContainer();
-                }
-
-                if (message != null)
-                {
-                    message.RemoveFromContainer();
-                }
-
-                // 如果不是历史消息，则添加到历史记录
-                if (!IsHistoryMessage)
-                {
-                    // 获取消息内容
-                    string nameText = name != null ? name.text : "";
-                    string messageText = message != null ? message.text : "";
-                    Color color = name != null ? name.color : Color.white;
-                    
-                    // 添加到历史记录
-                    owner.AddToHistory(nameText, messageText, color);
-                    DebugHandler.Log($"[雨甸中文输入] 将消息添加到历史记录: {nameText} - {messageText}");
-                }
-
-                // 从消息列表中移除
-                owner.lines.Remove(this);
+                // 立即销毁
+                ActualDestroy();
 
                 DebugHandler.Log("[雨甸中文输入] 强制销毁了一条消息");
             }
@@ -919,6 +816,54 @@ namespace GhostPlayer.GHud
             /// </summary>
             public void Destroy()
             {
+                // 设置透明度为0，开始淡出
+                setAlpha = 0f;
+                //下次删除的倒计时
+                owner.nextDelateDelay = 20;
+                // 尝试添加到历史记录（如果需要）
+                // AddToHistory();
+
+                // 标记为待销毁，等待透明度变为0后真正销毁
+                markedForDestroy = true;
+                DebugHandler.Log("[雨甸中文输入] 消息已标记为待销毁，等待淡出完成");
+            }
+
+            /// <summary>
+            /// 添加消息到历史记录
+            /// </summary>
+            private void AddToHistory()
+            {
+                // 如果已经在历史列表中，则不重复添加
+                if (isInHistoryList)
+                {
+                    DebugHandler.Log("[雨甸中文输入] 消息已在历史列表中，不重复添加");
+                    return;
+                }
+
+                // 如果是历史消息，则不添加到历史记录
+                if (IsHistoryMessage)
+                {
+                    DebugHandler.Log("[雨甸中文输入] 历史消息不需要添加到历史记录");
+                    return;
+                }
+
+                // 获取消息内容并添加到历史记录
+                string nameText = name != null ? name.text : "";
+                string messageText = message != null ? message.text : "";
+                Color color = name != null ? name.color : Color.white;
+
+                // 添加到历史记录
+                owner.AddToHistory(nameText, messageText, color);
+                isInHistoryList = true;
+                DebugHandler.Log($"[雨甸中文输入] 将消息添加到历史记录: {nameText} - {messageText}");
+            }
+
+            /// <summary>
+            /// 实际销毁消息，从显示中彻底移除
+            /// </summary>
+            private void ActualDestroy()
+            {
+                AddToHistory();
                 // 从容器中移除UI元素
                 if (name != null)
                 {
@@ -939,7 +884,7 @@ namespace GhostPlayer.GHud
                 // 重新分配所有非历史消息的生命周期
                 owner.ReallocateMessageLifecycles();
 
-                DebugHandler.Log("[雨甸中文输入] 销毁了一条消息");
+                DebugHandler.Log("[雨甸中文输入] 消息已完全销毁");
             }
 
             /// <summary>
@@ -969,6 +914,7 @@ namespace GhostPlayer.GHud
             public void SetAsHistoryMessage()
             {
                 IsHistoryMessage = true;
+                isInHistoryList = true; // 历史消息已经在历史列表中
             }
         }
 

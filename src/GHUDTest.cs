@@ -60,37 +60,6 @@ namespace GhostPlayer
                 if (ghud == null)
                     return;
                 
-                // 检查是否按下了测试按键
-                if (Input.GetKeyDown(KeyCode.F8))
-                {
-                    // 添加测试消息
-                    try
-                    {
-                        if (MatchmakingManager.currentInstance != null)
-                        {
-                            MatchmakingManager.currentInstance.SendChatMessage("这是一条测试消息");
-                            Debug.Log("[雨甸中文输入] 添加了测试消息");
-                        }
-                        else
-                        {
-                            Debug.LogWarning("[雨甸中文输入] MatchmakingManager.currentInstance为空，无法发送测试消息");
-                            // 如果不在线，直接添加本地消息
-                            GChatHud.NewChatLine("[测试]", "这是一条测试消息", 240, GHUDStatic.GHUDgreen);
-                        }
-                    }
-                    catch (KeyNotFoundException knfEx)
-                    {
-                        Debug.LogError($"[雨甸中文输入] 发送测试消息时遇到KeyNotFoundException: {knfEx.Message}");
-                        Debug.LogException(knfEx);
-                        // 出错时也添加本地消息
-                        GChatHud.NewChatLine("[测试]", "这是一条测试消息", 240, GHUDStatic.GHUDgreen);
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.LogError($"[雨甸中文输入] 发送测试消息失败: {ex.Message}");
-                        Debug.LogException(ex);
-                    }
-                }
             }
             catch (KeyNotFoundException knfEx)
             {

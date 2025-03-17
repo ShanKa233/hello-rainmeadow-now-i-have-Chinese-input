@@ -23,7 +23,7 @@ namespace GoodMorningRainMeadow
             EnableLogging = config.Bind(
                 "调试", 
                 "启用日志", 
-                true, 
+                false, 
                 "是否启用日志输出，发布时可以设置为false以提高性能"
             );
             

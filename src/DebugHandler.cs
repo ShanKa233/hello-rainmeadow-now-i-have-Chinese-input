@@ -11,7 +11,7 @@ namespace GoodMorningRainMeadow
     public static class DebugHandler
     {
         // 调试开关，设置为false可以禁用所有日志输出
-        public static bool EnableLogging = true;
+        public static bool EnableLogging = false;
         
         // 详细日志开关，控制是否输出详细的调试信息
         public static bool VerboseLogging = false;

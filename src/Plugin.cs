@@ -22,11 +22,14 @@ using static Player;
 
 namespace GoodMorningRainMeadow
 {
-	[BepInPlugin("goodmorainmeadow", "早上好雨甸,我有中文输入", "1.0.0")]
+	[BepInPlugin(MOD_ID, "早上好雨甸,我有中文输入", "1.0.0")]
 	public class Plugin : BaseUnityPlugin
 	{
 		internal static ManualLogSource logger;
 		private static Plugin instance;
+        public static Menu.RemixMenu menu=new Menu.RemixMenu();
+        private const string MOD_ID = "goodmorningrainmeadow.chineseinput";
+
 
 		public void OnEnable()
 		{
@@ -73,6 +76,10 @@ namespace GoodMorningRainMeadow
 				// 添加输入相关的Hook
 				On.Player.checkInput += Player_checkInput;
 				On.RWInput.PlayerUIInput_int += PlayerUIInput_int;
+
+				// 初始化菜单
+				MachineConnector.SetRegisteredOI(MOD_ID,menu);
+				DebugHandler.Log("已初始化菜单");
 			}
 			catch (Exception ex)
 			{

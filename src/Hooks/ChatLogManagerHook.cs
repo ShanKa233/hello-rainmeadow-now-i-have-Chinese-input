@@ -63,12 +63,10 @@ namespace GoodMorningRainMeadow
                     // GChatHud.handleMessage(username, message);
                     // GChatHud.NewChatLine(username, message, 240, GHUDStatic.GHUDwhite);
                     GChatHud.Instance.AddMessage(username, message);
-                    DebugHandler.Log($"[雨甸中文输入] 转发消息到GChat: {username}: {message}");
                 }
             }
             catch (Exception ex)
             {
-                DebugHandler.LogError($"转发消息到GChat失败: {ex.Message}");
             }
         }
     }

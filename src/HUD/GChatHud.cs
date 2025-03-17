@@ -145,7 +145,6 @@ namespace GhostPlayer.GHud
                                 if (playerID != null)
                                 {
                                     playerName = playerID.ToString();
-                                    DebugHandler.Log($"[雨甸中文输入] 成功获取玩家ID: {playerName}");
                                 }
                             }
                         }
@@ -153,7 +152,6 @@ namespace GhostPlayer.GHud
                 }
                 catch (Exception ex)
                 {
-                    DebugHandler.LogWarning($"[雨甸中文输入] 通过反射获取玩家ID失败: {ex.Message}");
                 }
             }
 
@@ -168,19 +166,15 @@ namespace GhostPlayer.GHud
             {
                 try
                 {
-                    DebugHandler.Log($"[雨甸中文输入] 尝试发送消息: {value}");
                     MatchmakingManager.currentInstance.SendChatMessage(value);
-                    DebugHandler.Log($"[雨甸中文输入] 消息已发送: {value}");
                 }
                 catch (KeyNotFoundException knfEx)
                 {
-                    DebugHandler.LogError($"[雨甸中文输入] 发送消息时遇到KeyNotFoundException: {knfEx.Message}");
                     // 发送失败时显示本地消息
                     NewChatLine($"[{playerName}]", value, GHUDStatic.GHUDyellow);
                 }
                 catch (Exception ex)
                 {
-                    DebugHandler.LogError($"[雨甸中文输入] 发送消息失败: {ex.Message}");
                     // 发送失败时显示本地消息
                     NewChatLine($"[{playerName}]", value, GHUDStatic.GHUDyellow);
                 }
@@ -206,7 +200,6 @@ namespace GhostPlayer.GHud
             if (isHistoryEnabled && lines.Count == 0)
             {
                 isHistoryEnabled = false;
-                DebugHandler.Log("[雨甸中文输入] 所有消息已消失，自动关闭历史消息显示");
             }
 
             // 检查是否在线
@@ -227,7 +220,6 @@ namespace GhostPlayer.GHud
             }
             catch (Exception ex)
             {
-                DebugHandler.LogError($"[雨甸中文输入] 获取聊天日志按键失败: {ex.Message}");
             }
         }
 
@@ -267,7 +259,6 @@ namespace GhostPlayer.GHud
             {
                 // 启用历史消息显示
                 ShowHistoryMessages();
-                DebugHandler.Log("[雨甸中文输入] 已启用历史消息显示");
             }
             else
             {
@@ -368,12 +359,10 @@ namespace GhostPlayer.GHud
             if (messageHistory.Count >= MAX_HISTORY_MESSAGES)
             {
                 messageHistory.RemoveAt(0);
-                DebugHandler.Log("[雨甸中文输入] 历史记录已满，移除最早的消息");
             }
 
             // 添加新消息到历史记录
             messageHistory.Add(new ChatMessageRecord(name, message, color));
-            DebugHandler.Log($"[雨甸中文输入] 添加消息到历史记录: {name} - {message}");
         }
 
         /// <summary>
@@ -433,6 +422,10 @@ namespace GhostPlayer.GHud
         /// </summary>
         private static void PlayMessageSound()
         {
+            if (Plugin.menu.messageSoundEnabled.Value==false)
+            {
+                return;
+            }
             // 获取当前场景
             var rainWorld = UnityEngine.Object.FindObjectOfType<RainWorld>();
             if (rainWorld != null && rainWorld.options != null)
@@ -448,7 +441,6 @@ namespace GhostPlayer.GHud
                         float randomVolume = UnityEngine.Random.Range(0.5f, 0.8f);
                         float randomPitch = UnityEngine.Random.Range(0.8f, 1.2f);
                         game.cameras[0].room.PlaySound(SoundID.MENU_Add_Level, randomVolume, randomPitch, 0.5f);
-                        DebugHandler.Log($"[雨甸中文输入] 播放了消息提示音 音量:{randomVolume:F2} 音高:{randomPitch:F2}");
                     }
                 }
             }
@@ -467,7 +459,6 @@ namespace GhostPlayer.GHud
                 // 添加空值检查
                 if (string.IsNullOrEmpty(message))
                 {
-                    Debug.LogWarning("[雨甸中文输入] 收到空消息内容，忽略此消息");
                     return;
                 }
 
@@ -801,7 +792,6 @@ namespace GhostPlayer.GHud
                 // 立即销毁
                 ActualDestroy();
 
-                DebugHandler.Log("[雨甸中文输入] 强制销毁了一条消息");
             }
 
             /// <summary>
@@ -818,7 +808,6 @@ namespace GhostPlayer.GHud
 
                 // 标记为待销毁，等待透明度变为0后真正销毁
                 markedForDestroy = true;
-                DebugHandler.Log("[雨甸中文输入] 消息已标记为待销毁，等待淡出完成");
             }
 
             /// <summary>
@@ -829,14 +818,12 @@ namespace GhostPlayer.GHud
                 // 如果已经在历史列表中，则不重复添加
                 if (isInHistoryList)
                 {
-                    DebugHandler.Log("[雨甸中文输入] 消息已在历史列表中，不重复添加");
                     return;
                 }
 
                 // 如果是历史消息，则不添加到历史记录
                 if (IsHistoryMessage)
                 {
-                    DebugHandler.Log("[雨甸中文输入] 历史消息不需要添加到历史记录");
                     return;
                 }
 
@@ -848,7 +835,6 @@ namespace GhostPlayer.GHud
                 // 添加到历史记录
                 owner.AddToHistory(nameText, messageText, color);
                 isInHistoryList = true;
-                DebugHandler.Log($"[雨甸中文输入] 将消息添加到历史记录: {nameText} - {messageText}");
             }
 
             /// <summary>
@@ -877,7 +863,6 @@ namespace GhostPlayer.GHud
                 // 重新分配所有非历史消息的生命周期
                 owner.ReallocateMessageLifecycles();
 
-                DebugHandler.Log("[雨甸中文输入] 消息已完全销毁");
             }
 
             /// <summary>

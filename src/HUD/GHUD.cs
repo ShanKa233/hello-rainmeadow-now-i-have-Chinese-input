@@ -40,7 +40,6 @@ namespace GhostPlayer.GHud
                 if (_lockInput == value)
                     return;
                 _lockInput = value;
-                Debug.Log($"[雨甸中文输入] 输入锁定状态改变: {value}");
             }
         }
 
@@ -69,7 +68,6 @@ namespace GhostPlayer.GHud
             // 检查是否在游戏内
             if (!(currentProcess is RainWorldGame))
             {
-                Debug.Log("[雨甸中文输入] 不在游戏内，无法打开聊天框");
                 return false;
             }
 
@@ -136,19 +134,15 @@ namespace GhostPlayer.GHud
                 // 检查是否已存在GHUD实例
                 if (Instance != null && Instance != this)
                 {
-                    Debug.Log("[雨甸中文输入] 检测到多个GHUD实例，销毁当前实例");
                     Destroy(gameObject);
                     return;
                 }
 
                 // 设置单例实例
                 Instance = this;
-                Debug.Log($"[雨甸中文输入] GHUD实例初始化，实例ID: {GetInstanceID()}");
             }
             catch (Exception ex)
             {
-                Debug.LogError("[雨甸中文输入] GHUD Awake失败: " + ex.Message);
-                Debug.LogException(ex);
             }
         }
 
@@ -159,7 +153,6 @@ namespace GhostPlayer.GHud
         {
             try
             {
-                Debug.Log("[雨甸中文输入] GHUD开始初始化");
 
                 // 获取雨世界实例
                 rainWorld = Custom.rainWorld;
@@ -192,12 +185,9 @@ namespace GhostPlayer.GHud
                 SetupInputField();
                 SetupHUD();
 
-                Debug.Log("[雨甸中文输入] GHUD初始化成功");
             }
             catch (Exception ex)
             {
-                Debug.LogError("[雨甸中文输入] GHUD初始化失败: " + ex.Message);
-                Debug.LogException(ex);
             }
         }
 
@@ -208,7 +198,6 @@ namespace GhostPlayer.GHud
         {
             try
             {
-                Debug.Log("[雨甸中文输入] GHUD开始销毁");
 
                 // 如果当前实例是单例实例，则重置单例
                 if (Instance == this)
@@ -239,12 +228,9 @@ namespace GhostPlayer.GHud
                     container.RemoveFromContainer();
                 }
 
-                Debug.Log("[雨甸中文输入] GHUD销毁完成");
             }
             catch (Exception ex)
             {
-                Debug.LogError("[雨甸中文输入] GHUD销毁失败: " + ex.Message);
-                Debug.LogException(ex);
             }
         }
 
@@ -257,20 +243,15 @@ namespace GhostPlayer.GHud
             {
                 // 检查UI模块
                 var uiAssembly = typeof(UnityEngine.UI.InputField).Assembly;
-                Debug.Log($"[雨甸中文输入] UI模块已加载: {uiAssembly.FullName}");
 
                 // 检查UIModule
                 var uiModuleAssembly = typeof(UnityEngine.Canvas).Assembly;
-                Debug.Log($"[雨甸中文输入] UIModule已加载: {uiModuleAssembly.FullName}");
 
                 // 检查EventSystems
                 var eventSystemsAssembly = typeof(UnityEngine.EventSystems.EventSystem).Assembly;
-                Debug.Log($"[雨甸中文输入] EventSystems已加载: {eventSystemsAssembly.FullName}");
             }
             catch (Exception ex)
             {
-                Debug.LogError("[雨甸中文输入] 检查程序集失败: " + ex.Message);
-                Debug.LogException(ex);
             }
         }
 
@@ -283,7 +264,7 @@ namespace GhostPlayer.GHud
             {
                 // 检查游戏场景是否已切换
                 CheckGameState();
-                
+
                 // 更新输入框状态
                 InputFieldUpdate();
 
@@ -305,8 +286,6 @@ namespace GhostPlayer.GHud
             }
             catch (Exception ex)
             {
-                UnityEngine.Debug.LogError("[雨甸中文输入] GHUD更新失败: " + ex.Message);
-                UnityEngine.Debug.LogException(ex);
             }
         }
 
@@ -319,12 +298,11 @@ namespace GhostPlayer.GHud
             {
                 // 获取当前进程
                 var currentProcess = Custom.rainWorld?.processManager?.currentMainLoop;
-                
+
                 // 如果不在游戏内且GHUD实例存在，则销毁GHUD
                 if (!(currentProcess is RainWorldGame game) && Instance == this)
                 {
-                    Debug.Log("[雨甸中文输入] 检测到游戏场景已切换，销毁GHUD实例");
-                    
+
                     // 清理资源
                     if (inputField != null)
                     {
@@ -342,11 +320,9 @@ namespace GhostPlayer.GHud
             }
             catch (Exception ex)
             {
-                Debug.LogError("[雨甸中文输入] 检查游戏状态失败: " + ex.Message);
-                Debug.LogException(ex);
             }
         }
-        
+
         /// <summary>
         /// 延迟销毁GHUD实例
         /// </summary>
@@ -364,24 +340,18 @@ namespace GhostPlayer.GHud
         {
             try
             {
-                // // 添加通知系统
-                // parts.Add(new GAnnouncementHud(this));
-                // Debug.Log("[雨甸中文输入] 添加了GAnnouncementHud");
 
                 // 添加聊天框
                 parts.Add(new GChatHud(this));
-                Debug.Log("[雨甸中文输入] 添加了GChatHud");
+
 
                 // 添加输入框
                 parts.Add(new GInputBox(this));
-                Debug.Log("[雨甸中文输入] 添加了GInputBox");
 
-                Debug.Log("[雨甸中文输入] HUD组件设置成功");
+
             }
             catch (Exception ex)
             {
-                Debug.LogError("[雨甸中文输入] HUD组件设置失败: " + ex.Message);
-                Debug.LogException(ex);
             }
         }
 
@@ -408,8 +378,6 @@ namespace GhostPlayer.GHud
             }
             catch (Exception ex)
             {
-                Debug.LogError("[雨甸中文输入] FixUpdate失败: " + ex.Message);
-                Debug.LogException(ex);
             }
         }
 
@@ -427,8 +395,6 @@ namespace GhostPlayer.GHud
             }
             catch (Exception ex)
             {
-                Debug.LogError("[雨甸中文输入] Draw失败: " + ex.Message);
-                Debug.LogException(ex);
             }
         }
 
@@ -448,7 +414,6 @@ namespace GhostPlayer.GHud
             //    string[] testName = { "[Harvie]", "[wawa screamer]", "[this is a long name which is hugely long as you can see]", "[Joar]" };
 
             //    GChatHud.NewChatLine(testName[Random.Range(0,testName.Length)], result, (result.Length * testName.Length) * 6, Color.white);
-            //    Debug.Log("[雨甸中文输入] 新聊天行已添加");
             //}
         }
 
@@ -460,15 +425,13 @@ namespace GhostPlayer.GHud
         {
             try
             {
-                Debug.Log("[雨甸中文输入] 开始设置输入框");
 
                 // 检查是否已存在输入框
                 var existingInputFields = FindObjectsOfType<InputField>().Where(f => f.gameObject.name == "GHUDInputField").ToArray();
-                
+
                 // 如果存在多个输入框，删除除第一个以外的所有输入框
                 if (existingInputFields.Length > 1)
                 {
-                    Debug.Log($"[雨甸中文输入] 检测到{existingInputFields.Length}个输入框，保留第一个，删除其余的");
                     for (int i = 1; i < existingInputFields.Length; i++)
                     {
                         Destroy(existingInputFields[i].gameObject);
@@ -478,9 +441,8 @@ namespace GhostPlayer.GHud
                 // 如果存在至少一个输入框，使用它
                 if (existingInputFields.Length > 0)
                 {
-                    Debug.Log("[雨甸中文输入] 使用现有输入框");
                     inputField = existingInputFields[0];
-                    
+
                     // 重新设置事件监听
                     inputField.onValueChanged.RemoveAllListeners();
                     inputField.onEndEdit.RemoveAllListeners();
@@ -538,12 +500,9 @@ namespace GhostPlayer.GHud
                 inputField.onValueChanged.AddListener(ListenChange);
                 inputField.onEndEdit.AddListener(OnEndEdit);
 
-                Debug.Log("[雨甸中文输入] 输入框设置成功");
             }
             catch (Exception ex)
             {
-                Debug.LogError("[雨甸中文输入] 输入框设置失败: " + ex.Message);
-                Debug.LogException(ex);
             }
         }
 
@@ -562,8 +521,6 @@ namespace GhostPlayer.GHud
             }
             catch (Exception ex)
             {
-                Debug.LogError("[雨甸中文输入] 处理输入框值变化失败: " + ex.Message);
-                Debug.LogException(ex);
             }
         }
 
@@ -573,24 +530,16 @@ namespace GhostPlayer.GHud
         /// <param name="value">输入的文本</param>
         void OnEndEdit(string value)
         {
-            try
+            // 如果失去焦点但没有按回车，则取消
+            if (!inputField.isFocused && !Input.GetKey(KeyCode.Return) && !Input.GetKey(KeyCode.KeypadEnter))
             {
-                // 如果失去焦点但没有按回车，则取消
-                if (!inputField.isFocused && !Input.GetKey(KeyCode.Return) && !Input.GetKey(KeyCode.KeypadEnter))
-                {
-                    OnInputFieldCancel?.Invoke(value, inputField.caretPosition);
-                    inputField.text = "";
-                    currentInputString = "";
-                    inputField.DeactivateInputField();
-                    activated = false;
-                    // 添加一个短暂的延迟再解除输入锁定
-                    StartCoroutine(DelayedUnlock());
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError("[雨甸中文输入] 处理输入框结束编辑失败: " + ex.Message);
-                Debug.LogException(ex);
+                OnInputFieldCancel?.Invoke(value, inputField.caretPosition);
+                inputField.text = "";
+                currentInputString = "";
+                inputField.DeactivateInputField();
+                activated = false;
+                // 添加一个短暂的延迟再解除输入锁定
+                StartCoroutine(DelayedUnlock());
             }
         }
 
@@ -690,8 +639,6 @@ namespace GhostPlayer.GHud
             }
             catch (Exception ex)
             {
-                Debug.LogError("[雨甸中文输入] 更新输入框状态失败: " + ex.Message);
-                Debug.LogException(ex);
             }
         }
 
@@ -705,23 +652,19 @@ namespace GhostPlayer.GHud
                 // 检查是否可以激活输入框
                 if (!CanActivateInputField())
                 {
-                    UnityEngine.Debug.Log("[雨甸中文输入] 当前无法打开聊天框");
                     return;
                 }
 
                 // 检查输入框是否存在
                 if (inputField == null)
                 {
-                    UnityEngine.Debug.LogError("[雨甸中文输入] 输入框不存在，无法激活");
                     return;
                 }
 
-                Debug.Log("[雨甸中文输入] 激活输入框");
 
                 // 如果输入框已经激活，则不处理
                 if (activated)
                 {
-                    Debug.Log("[雨甸中文输入] 输入框已经激活");
                     return;
                 }
 
@@ -743,12 +686,9 @@ namespace GhostPlayer.GHud
                 activated = true;
                 inputField.ActivateInputField();
 
-                Debug.Log("[雨甸中文输入] 输入框已激活");
             }
             catch (Exception ex)
             {
-                Debug.LogError("[雨甸中文输入] 激活输入框失败: " + ex.Message);
-                Debug.LogException(ex);
             }
         }
         #endregion

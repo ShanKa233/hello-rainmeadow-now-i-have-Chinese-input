@@ -175,14 +175,12 @@ namespace GhostPlayer.GHud
                 catch (KeyNotFoundException knfEx)
                 {
                     DebugHandler.LogError($"[雨甸中文输入] 发送消息时遇到KeyNotFoundException: {knfEx.Message}");
-                    Debug.LogException(knfEx);
                     // 发送失败时显示本地消息
                     NewChatLine($"[{playerName}]", value, GHUDStatic.GHUDyellow);
                 }
                 catch (Exception ex)
                 {
                     DebugHandler.LogError($"[雨甸中文输入] 发送消息失败: {ex.Message}");
-                    Debug.LogException(ex);
                     // 发送失败时显示本地消息
                     NewChatLine($"[{playerName}]", value, GHUDStatic.GHUDyellow);
                 }
@@ -275,9 +273,9 @@ namespace GhostPlayer.GHud
             {
 
                 // 确保所有历史消息都被立即移除
-                for (int i = 0; i < lines.Count; i++)
+                while (lines.Count > 0)
                 {
-                        lines[i].ForceDestroy();
+                    lines[0].ForceDestroy();
                 }
             }
 
@@ -465,7 +463,6 @@ namespace GhostPlayer.GHud
         {
             try
             {
-                Debug.Log($"[雨甸中文输入] GChatHud.AddMessage被调用: 用户={username}, 消息={message}");
 
                 // 添加空值检查
                 if (string.IsNullOrEmpty(message))
@@ -519,7 +516,6 @@ namespace GhostPlayer.GHud
                 }
                 catch (Exception ex)
                 {
-                    UnityEngine.Debug.LogWarning($"[雨甸中文输入] 获取玩家颜色失败: {ex.Message}");
                     // 使用默认白色创建聊天行
                     NewChatLine($"[{username}]", message, GHUDStatic.GHUDwhite);
                     PlayMessageSound();
@@ -527,8 +523,6 @@ namespace GhostPlayer.GHud
             }
             catch (Exception ex)
             {
-                UnityEngine.Debug.LogError($"[雨甸中文输入] 添加消息失败: {ex.Message}");
-                UnityEngine.Debug.LogException(ex);
             }
         }
 
@@ -647,7 +641,6 @@ namespace GhostPlayer.GHud
                 if (IsHistoryMessage && !owner.isHistoryEnabled)
                 {
                     ForceDestroy();
-                    DebugHandler.Log("[雨甸中文输入] 历史消息已被立即销毁");
                     return;
                 }
 
@@ -940,34 +933,16 @@ namespace GhostPlayer.GHud
             public GChatHudAdapter(GChatHud gChatHud)
             {
                 this.gChatHud = gChatHud;
-                try
+                // 创建一个代理对象，用于接收消息
+                chatHudProxy = new ChatHudProxy(this);
+
+                // 使用反射调用ChatLogManager.Subscribe方法
+                Type chatLogManagerType = typeof(ChatLogManager);
+
+                MethodInfo subscribeMethod = chatLogManagerType.GetMethod("Subscribe");
+                if (subscribeMethod != null)
                 {
-                    // 创建一个代理对象，用于接收消息
-                    chatHudProxy = new ChatHudProxy(this);
-                    Debug.Log("[雨甸中文输入] 已创建ChatHudProxy对象");
-
-                    // 使用反射调用ChatLogManager.Subscribe方法
-                    Type chatLogManagerType = typeof(ChatLogManager);
-                    Debug.Log($"[雨甸中文输入] ChatLogManager类型: {chatLogManagerType.FullName}");
-
-                    MethodInfo subscribeMethod = chatLogManagerType.GetMethod("Subscribe");
-                    if (subscribeMethod != null)
-                    {
-                        Debug.Log($"[雨甸中文输入] 找到Subscribe方法: {subscribeMethod.Name}");
-                        Debug.Log($"[雨甸中文输入] Subscribe方法参数类型: {subscribeMethod.GetParameters()[0].ParameterType.FullName}");
-
-                        subscribeMethod.Invoke(null, new object[] { chatHudProxy });
-                        Debug.Log("[雨甸中文输入] ChatHud适配器已订阅ChatLogManager");
-                    }
-                    else
-                    {
-                        Debug.LogError("[雨甸中文输入] 无法找到ChatLogManager.Subscribe方法");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogError("[雨甸中文输入] 订阅ChatLogManager失败: " + ex.Message);
-                    Debug.LogException(ex);
+                    subscribeMethod.Invoke(null, new object[] { chatHudProxy });
                 }
             }
 
@@ -986,13 +961,11 @@ namespace GhostPlayer.GHud
                         if (unsubscribeMethod != null)
                         {
                             unsubscribeMethod.Invoke(null, new object[] { chatHudProxy });
-                            Debug.Log("[雨甸中文输入] ChatHud适配器已取消订阅ChatLogManager");
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogError("[雨甸中文输入] 取消订阅ChatLogManager失败: " + ex.Message);
                 }
             }
         }
@@ -1030,12 +1003,10 @@ namespace GhostPlayer.GHud
             {
                 try
                 {
-                    UnityEngine.Debug.Log($"[雨甸中文输入] ChatHudProxy.AddMessage被调用: 用户={user}, 消息={message}");
 
                     // 添加额外的空值检查
                     if (adapter == null || adapter.gChatHud == null)
                     {
-                        UnityEngine.Debug.LogError("[雨甸中文输入] ChatHudProxy.adapter或gChatHud为空");
                         return;
                     }
 
@@ -1043,8 +1014,6 @@ namespace GhostPlayer.GHud
                 }
                 catch (Exception ex)
                 {
-                    UnityEngine.Debug.LogError($"[雨甸中文输入] ChatHudProxy处理消息失败: {ex.Message}");
-                    UnityEngine.Debug.LogException(ex);
                 }
             }
         }

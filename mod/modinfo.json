@@ -1,8 +1,8 @@
 {
 	"id": "goodmorningrainmeadow.chineseinput",
-	"name": "早上好雨甸,现在我有中文输入法!",
-	"version": "1.0.1",
+	"name": "早上好雨甸,现在我有中文输入法! | Good Morning Rain Meadow, Now I Have Chinese Input!",
+	"version": "1.0.2", 
 	"authors": "GoodMorningRainMeadow",
-	"description": "为雨甸添加中文输入支持<LINE>让你可以在雨甸聊天框中输入中文",
+	"description": "为雨甸添加中文输入支持<LINE>让你可以在雨甸聊天框中输入中文<LINE>Add Chinese input support for Rain Meadow<LINE>Allows you to input Chinese in Rain Meadow chat box",
 	"requirements": [ "henpemaz_rainmeadow"]
 } 

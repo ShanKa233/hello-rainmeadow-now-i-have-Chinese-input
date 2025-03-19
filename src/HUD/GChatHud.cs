@@ -252,8 +252,11 @@ namespace GhostPlayer.GHud
         /// </summary>
         public void ToggleHistoryMessages()
         {
+            if (hud.inputField.isFocused)
+                return;
             // 切换历史消息显示状态
             isHistoryEnabled = !isHistoryEnabled;
+            // 如果输入框正在使用,不切换历史消息显示状态
 
             if (isHistoryEnabled)
             {

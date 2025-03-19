@@ -248,6 +248,7 @@ namespace GhostPlayer.GHud
         {
             // 显示输入框
             setShow = 1f;
+            label.text = "";
         }
 
         /// <summary>

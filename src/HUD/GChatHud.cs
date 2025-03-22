@@ -228,6 +228,17 @@ namespace GhostPlayer.GHud
         /// </summary>
         private void ManageMessageDisplay()
         {
+            // 如果输入框获得焦点，显示历史消息
+            if (hud.inputField.isFocused)
+            {
+                // 如果历史消息未启用，则启用它
+                if (!isHistoryEnabled)
+                {
+                    isHistoryEnabled = true;
+                    ShowHistoryMessages();
+                }
+                return;
+            }
             // 减少删除延迟计时器
             if (nextDelateDelay <= 0)
             {

@@ -56,30 +56,43 @@ namespace GhostPlayer.GHud
         /// </summary>
         private bool CanActivateInputField()
         {
-            // 检查是否在线
-            if (MatchmakingManager.currentInstance == null)
+            try
+            {
+                // 检查是否在线
+                if (MatchmakingManager.currentInstance == null)
+                {
+                    return false;
+                }
+
+                // 获取当前进程
+                var currentProcess = Custom.rainWorld?.processManager?.currentMainLoop;
+
+                // 检查是否在游戏内
+                if (!(currentProcess is RainWorldGame))
+                {
+                    return false;
+                }
+
+                var game = currentProcess as RainWorldGame;
+
+                // 检查是否存在暂停菜单
+                if (game.pauseMenu != null)
+                {
+                    return false;
+                }
+
+                // 检查玩家是否已经准备就绪
+                if (game.Players == null || game.Players.Count == 0 || game.Players[0].realizedCreature == null)
+                {
+                    return false;
+                }
+
+                return true;
+            }
+            catch (Exception ex)
             {
                 return false;
             }
-
-            // 获取当前进程
-            var currentProcess = Custom.rainWorld?.processManager?.currentMainLoop;
-
-            // 检查是否在游戏内
-            if (!(currentProcess is RainWorldGame))
-            {
-                return false;
-            }
-
-            var game = currentProcess as RainWorldGame;
-
-            // 检查是否存在暂停菜单
-            if (game.pauseMenu != null)
-            {
-                return false;
-            }
-
-            return true;
         }
 
         #region RWParam

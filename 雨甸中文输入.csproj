@@ -12,8 +12,8 @@
   </PropertyGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="if not exist &quot;$(SolutionDir)mod\plugins&quot; mkdir &quot;$(SolutionDir)mod\plugins&quot;" />
-    <Exec Command="copy /Y &quot;$(TargetPath)&quot; &quot;$(SolutionDir)mod\plugins\&quot;" />
+    <Exec Command="if not exist &quot;$(SolutionDir)mod\newest\plugins&quot; mkdir &quot;$(SolutionDir)mod\newest\plugins&quot;" />
+    <Exec Command="copy /Y &quot;$(TargetPath)&quot; &quot;$(SolutionDir)mod\newest\plugins\&quot;" />
   </Target>
 
   <ItemGroup>

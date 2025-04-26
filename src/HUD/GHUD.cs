@@ -56,43 +56,36 @@ namespace GhostPlayer.GHud
         /// </summary>
         private bool CanActivateInputField()
         {
-            try
-            {
-                // 检查是否在线
-                if (MatchmakingManager.currentInstance == null)
-                {
-                    return false;
-                }
-
-                // 获取当前进程
-                var currentProcess = Custom.rainWorld?.processManager?.currentMainLoop;
-
-                // 检查是否在游戏内
-                if (!(currentProcess is RainWorldGame))
-                {
-                    return false;
-                }
-
-                var game = currentProcess as RainWorldGame;
-
-                // 检查是否存在暂停菜单
-                if (game.pauseMenu != null)
-                {
-                    return false;
-                }
-
-                // 检查玩家是否已经准备就绪
-                if (game.Players == null || game.Players.Count == 0 || game.Players[0].realizedCreature == null)
-                {
-                    return false;
-                }
-
-                return true;
-            }
-            catch (Exception ex)
+            // 检查是否在线
+            if (MatchmakingManager.currentInstance == null)
             {
                 return false;
             }
+
+            // 获取当前进程
+            var currentProcess = Custom.rainWorld?.processManager?.currentMainLoop;
+
+            // 检查是否在游戏内
+            if (!(currentProcess is RainWorldGame))
+            {
+                return false;
+            }
+
+            var game = currentProcess as RainWorldGame;
+
+            // 检查是否存在暂停菜单
+            if (game.pauseMenu != null)
+            {
+                return false;
+            }
+
+            // 检查玩家是否已经准备就绪
+            if (game.Players == null || game.Players.Count == 0 || game.Players[0].realizedCreature == null)
+            {
+                return false;
+            }
+
+            return true;
         }
 
         #region RWParam
@@ -142,21 +135,15 @@ namespace GhostPlayer.GHud
         /// </summary>
         void Awake()
         {
-            try
+            // 检查是否已存在GHUD实例
+            if (Instance != null && Instance != this)
             {
-                // 检查是否已存在GHUD实例
-                if (Instance != null && Instance != this)
-                {
-                    Destroy(gameObject);
-                    return;
-                }
+                Destroy(gameObject);
+                return;
+            }
 
-                // 设置单例实例
-                Instance = this;
-            }
-            catch (Exception ex)
-            {
-            }
+            // 设置单例实例
+            Instance = this;
         }
 
         /// <summary>
@@ -164,44 +151,37 @@ namespace GhostPlayer.GHud
         /// </summary>
         void Start()
         {
-            try
+            // 获取雨世界实例
+            rainWorld = Custom.rainWorld;
+
+            // 检查必要的程序集是否已加载
+            CheckRequiredAssemblies();
+
+            // 创建Unity UI系统组件
+            canvas = gameObject.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+
+            // 添加事件系统
+            if (FindObjectOfType<EventSystem>() == null)
             {
-
-                // 获取雨世界实例
-                rainWorld = Custom.rainWorld;
-
-                // 检查必要的程序集是否已加载
-                CheckRequiredAssemblies();
-
-                // 创建Unity UI系统组件
-                canvas = gameObject.AddComponent<Canvas>();
-                canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-
-                // 添加事件系统
-                if (FindObjectOfType<EventSystem>() == null)
-                {
-                    var eventSystem = new GameObject("EventSystem");
-                    eventSystem.AddComponent<EventSystem>();
-                    eventSystem.AddComponent<StandaloneInputModule>();
-                    DontDestroyOnLoad(eventSystem);
-                }
-
-                // 创建Futile容器
-                container = new FContainer();
-
-                // 创建Futile舞台并添加容器
-                var stage = new FStage("GHUD");
-                Futile.AddStage(stage);
-                stage.AddChild(container);
-
-                // 设置输入框和HUD组件
-                SetupInputField();
-                SetupHUD();
-
+                var eventSystem = new GameObject("EventSystem");
+                eventSystem.AddComponent<EventSystem>();
+                eventSystem.AddComponent<StandaloneInputModule>();
+                DontDestroyOnLoad(eventSystem);
             }
-            catch (Exception ex)
-            {
-            }
+
+            // 创建Futile容器
+            container = new FContainer();
+
+            // 创建Futile舞台并添加容器
+            var stage = new FStage("GHUD");
+            Futile.AddStage(stage);
+            stage.AddChild(container);
+
+            // 设置输入框和HUD组件
+            SetupInputField();
+            SetupHUD();
+
         }
 
         /// <summary>
@@ -209,42 +189,36 @@ namespace GhostPlayer.GHud
         /// </summary>
         void OnDestroy()
         {
-            try
+
+            // 如果当前实例是单例实例，则重置单例
+            if (Instance == this)
             {
-
-                // 如果当前实例是单例实例，则重置单例
-                if (Instance == this)
-                {
-                    Instance = null;
-                }
-
-                // 清理所有HUD部件
-                if (parts != null)
-                {
-                    foreach (var part in parts)
-                    {
-                        part.ClearSprites();
-                    }
-                    parts.Clear();
-                }
-
-                // 移除输入框事件监听
-                if (inputField != null)
-                {
-                    inputField.onValueChanged.RemoveAllListeners();
-                    inputField.onEndEdit.RemoveAllListeners();
-                }
-
-                // 移除Futile容器
-                if (container != null)
-                {
-                    container.RemoveFromContainer();
-                }
-
+                Instance = null;
             }
-            catch (Exception ex)
+
+            // 清理所有HUD部件
+            if (parts != null)
             {
+                foreach (var part in parts)
+                {
+                    part.ClearSprites();
+                }
+                parts.Clear();
             }
+
+            // 移除输入框事件监听
+            if (inputField != null)
+            {
+                inputField.onValueChanged.RemoveAllListeners();
+                inputField.onEndEdit.RemoveAllListeners();
+            }
+
+            // 移除Futile容器
+            if (container != null)
+            {
+                container.RemoveFromContainer();
+            }
+
         }
 
         /// <summary>
@@ -273,76 +247,21 @@ namespace GhostPlayer.GHud
         /// </summary>
         void Update()
         {
-            try
+            // 更新输入框状态
+            InputFieldUpdate();
+
+            // 更新时间累加器
+            timeStacker += Time.deltaTime * framePerSec;
+
+            // 如果累加器达到1，执行固定更新
+            while (timeStacker >= 1f)
             {
-                // 检查游戏场景是否已切换
-                CheckGameState();
-
-                // 更新输入框状态
-                InputFieldUpdate();
-
-                // 更新时间累加器
-                timeStacker += Time.deltaTime * framePerSec;
-
-                // 如果累加器达到1，执行固定更新
-                while (timeStacker >= 1f)
-                {
-                    timeStacker -= 1f;
-                    FixUpdate();
-                }
-
-                // 绘制逻辑
-                Draw();
-
-                // 测试功能和输入框更新
-                TestFunc();
+                timeStacker -= 1f;
+                FixUpdate();
             }
-            catch (Exception ex)
-            {
-            }
-        }
 
-        /// <summary>
-        /// 检查游戏状态，如果不在游戏场景中则销毁GHUD
-        /// </summary>
-        private void CheckGameState()
-        {
-            try
-            {
-                // 获取当前进程
-                var currentProcess = Custom.rainWorld?.processManager?.currentMainLoop;
-
-                // 如果不在游戏内且GHUD实例存在，则销毁GHUD
-                if (!(currentProcess is RainWorldGame game) && Instance == this)
-                {
-
-                    // 清理资源
-                    if (inputField != null)
-                    {
-                        // 确保输入框不再活跃
-                        if (activated)
-                        {
-                            inputField.DeactivateInputField();
-                            activated = false;
-                            LockInput = false;
-                        }
-                    }
-                    // 延迟销毁，避免在Update中直接销毁对象
-                    StartCoroutine(DelayedDestroy());
-                }
-            }
-            catch (Exception ex)
-            {
-            }
-        }
-
-        /// <summary>
-        /// 延迟销毁GHUD实例
-        /// </summary>
-        private IEnumerator DelayedDestroy()
-        {
-            yield return null; // 等待一帧
-            Destroy(gameObject);
+            // 绘制逻辑
+            Draw();
         }
         #endregion
 
@@ -355,11 +274,11 @@ namespace GhostPlayer.GHud
             {
 
                 // 添加聊天框
-                parts.Add(new GChatHud(this));
+                // parts.Add(new GChatHud(this));
 
 
                 // 添加输入框
-                parts.Add(new GInputBox(this));
+                // parts.Add(new GInputBox(this));
 
 
             }
@@ -411,24 +330,6 @@ namespace GhostPlayer.GHud
             }
         }
 
-        /// <summary>
-        /// 测试功能，用于开发调试
-        /// </summary>
-        void TestFunc()
-        {
-            //if (Input.GetKeyDown(KeyCode.Space))
-            //{
-            //    string result = "";
-            //    for(int i = 0;i < Random.Range(1, 5); i++)
-            //    {
-            //        result += "this is a test message ";
-            //    }
-
-            //    string[] testName = { "[Harvie]", "[wawa screamer]", "[this is a long name which is hugely long as you can see]", "[Joar]" };
-
-            //    GChatHud.NewChatLine(testName[Random.Range(0,testName.Length)], result, (result.Length * testName.Length) * 6, Color.white);
-            //}
-        }
 
         #region InputField
         /// <summary>
@@ -436,87 +337,79 @@ namespace GhostPlayer.GHud
         /// </summary>
         void SetupInputField()
         {
-            try
+            // 检查是否已存在输入框
+            var existingInputFields = FindObjectsOfType<InputField>().Where(f => f.gameObject.name == "GHUDInputField").ToArray();
+
+            // 如果存在多个输入框，删除除第一个以外的所有输入框
+            if (existingInputFields.Length > 1)
             {
-
-                // 检查是否已存在输入框
-                var existingInputFields = FindObjectsOfType<InputField>().Where(f => f.gameObject.name == "GHUDInputField").ToArray();
-
-                // 如果存在多个输入框，删除除第一个以外的所有输入框
-                if (existingInputFields.Length > 1)
+                for (int i = 1; i < existingInputFields.Length; i++)
                 {
-                    for (int i = 1; i < existingInputFields.Length; i++)
-                    {
-                        Destroy(existingInputFields[i].gameObject);
-                    }
+                    Destroy(existingInputFields[i].gameObject);
                 }
+            }
 
-                // 如果存在至少一个输入框，使用它
-                if (existingInputFields.Length > 0)
-                {
-                    inputField = existingInputFields[0];
+            // 如果存在至少一个输入框，使用它
+            if (existingInputFields.Length > 0)
+            {
+                inputField = existingInputFields[0];
 
-                    // 重新设置事件监听
-                    inputField.onValueChanged.RemoveAllListeners();
-                    inputField.onEndEdit.RemoveAllListeners();
-                    inputField.onValueChanged.AddListener(ListenChange);
-                    inputField.onEndEdit.AddListener(OnEndEdit);
-                    return;
-                }
-
-                // 创建输入框游戏对象
-                var obj = new GameObject("GHUDInputField");
-                // 将对象放在视野外（隐藏但仍然活跃）
-                obj.transform.position = new Vector3(100000f, 100000f, 100000f);
-                obj.transform.SetParent(canvas.transform, false);
-
-                // 添加必要的UI组件
-                obj.AddComponent<CanvasRenderer>();
-                var rectTransform = obj.AddComponent<RectTransform>();
-                rectTransform.sizeDelta = new Vector2(200, 30);
-                var image = obj.AddComponent<Image>();
-                image.color = new Color(0.1f, 0.1f, 0.1f, 0.8f);
-
-                // 创建占位符对象
-                var placeHolder = new GameObject("GHUD_PlaceHolder");
-                placeHolder.transform.SetParent(obj.transform, false);
-                var placeHolderRect = placeHolder.AddComponent<RectTransform>();
-                placeHolderRect.sizeDelta = new Vector2(190, 20);
-                placeHolderRect.anchoredPosition = Vector2.zero;
-                placeHolder.AddComponent<CanvasRenderer>();
-                var placeholderText = placeHolder.AddComponent<Text>();
-                placeholderText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-                placeholderText.color = new Color(0.5f, 0.5f, 0.5f, 1f);
-                placeholderText.text = "输入聊天内容...";
-                placeholderText.alignment = TextAnchor.MiddleLeft;
-
-                // 创建文本对象
-                var text = new GameObject("GHUD_Text");
-                text.transform.SetParent(obj.transform, false);
-                var textRect = text.AddComponent<RectTransform>();
-                textRect.sizeDelta = new Vector2(190, 20);
-                textRect.anchoredPosition = Vector2.zero;
-                text.AddComponent<CanvasRenderer>();
-                var inputText = text.AddComponent<Text>();
-                inputText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-                inputText.color = Color.white;
-                inputText.alignment = TextAnchor.MiddleLeft;
-
-                // 设置输入框组件
-                inputField = obj.AddComponent<InputField>();
-                inputField.textComponent = inputText;
-                inputField.placeholder = placeholderText;
-                inputField.caretWidth = 2;
-                inputField.selectionColor = new Color(0.2f, 0.6f, 1f, 0.4f);
-
-                // 添加值变化监听器
+                // 重新设置事件监听
+                inputField.onValueChanged.RemoveAllListeners();
+                inputField.onEndEdit.RemoveAllListeners();
                 inputField.onValueChanged.AddListener(ListenChange);
                 inputField.onEndEdit.AddListener(OnEndEdit);
+                return;
+            }
 
-            }
-            catch (Exception ex)
-            {
-            }
+            // 创建输入框游戏对象
+            var obj = new GameObject("GHUDInputField");
+            // 将对象放在视野外（隐藏但仍然活跃）
+            obj.transform.position = new Vector3(100000f, 100000f, 100000f);
+            obj.transform.SetParent(canvas.transform, false);
+
+            // 添加必要的UI组件
+            obj.AddComponent<CanvasRenderer>();
+            var rectTransform = obj.AddComponent<RectTransform>();
+            rectTransform.sizeDelta = new Vector2(200, 30);
+            var image = obj.AddComponent<Image>();
+            image.color = new Color(0.1f, 0.1f, 0.1f, 0.8f);
+
+            // 创建占位符对象
+            var placeHolder = new GameObject("GHUD_PlaceHolder");
+            placeHolder.transform.SetParent(obj.transform, false);
+            var placeHolderRect = placeHolder.AddComponent<RectTransform>();
+            placeHolderRect.sizeDelta = new Vector2(190, 20);
+            placeHolderRect.anchoredPosition = Vector2.zero;
+            placeHolder.AddComponent<CanvasRenderer>();
+            var placeholderText = placeHolder.AddComponent<Text>();
+            placeholderText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            placeholderText.color = new Color(0.5f, 0.5f, 0.5f, 1f);
+            placeholderText.text = "输入聊天内容...";
+            placeholderText.alignment = TextAnchor.MiddleLeft;
+
+            // 创建文本对象
+            var text = new GameObject("GHUD_Text");
+            text.transform.SetParent(obj.transform, false);
+            var textRect = text.AddComponent<RectTransform>();
+            textRect.sizeDelta = new Vector2(190, 20);
+            textRect.anchoredPosition = Vector2.zero;
+            text.AddComponent<CanvasRenderer>();
+            var inputText = text.AddComponent<Text>();
+            inputText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            inputText.color = Color.white;
+            inputText.alignment = TextAnchor.MiddleLeft;
+
+            // 设置输入框组件
+            inputField = obj.AddComponent<InputField>();
+            inputField.textComponent = inputText;
+            inputField.placeholder = placeholderText;
+            inputField.caretWidth = 2;
+            inputField.selectionColor = new Color(0.2f, 0.6f, 1f, 0.4f);
+
+            // 添加值变化监听器
+            inputField.onValueChanged.AddListener(ListenChange);
+            inputField.onEndEdit.AddListener(OnEndEdit);
         }
 
         /// <summary>
@@ -525,16 +418,10 @@ namespace GhostPlayer.GHud
         /// <param name="value">新的输入值</param>
         void ListenChange(string value)
         {
-            try
-            {
-                // 更新当前输入字符串
-                currentInputString = value;
-                // 触发值变化事件
-                OnInputFieldChanged?.Invoke(value, inputField.caretPosition);
-            }
-            catch (Exception ex)
-            {
-            }
+            // 更新当前输入字符串
+            currentInputString = value;
+            // 触发值变化事件
+            OnInputFieldChanged?.Invoke(value, inputField.caretPosition);
         }
 
         /// <summary>
@@ -570,88 +457,82 @@ namespace GhostPlayer.GHud
         /// </summary>
         void InputFieldUpdate()
         {
-            try
+            // 设置输入锁定状态
+            LockInput = activated;
+
+            // 处理ESC键
+            if (Input.GetKeyDown(KeyCode.Escape) && activated)
             {
-                // 设置输入锁定状态
-                LockInput = activated;
-
-                // 处理ESC键
-                if (Input.GetKeyDown(KeyCode.Escape) && activated)
-                {
-                    OnInputFieldCancel?.Invoke(currentInputString, inputField.caretPosition);
-                    currentInputString = "";
-                    inputField.text = "";
-                    inputField.DeactivateInputField();
-                    activated = false;
-                    StartCoroutine(DelayedUnlock());
-                    return;
-                }
-
-                // 如果输入框失去焦点且之前是激活的，则取消输入
-                if (!inputField.isFocused && activated && !Input.GetKey(KeyCode.Return) && !Input.GetKey(KeyCode.KeypadEnter))
-                {
-                    OnInputFieldCancel?.Invoke(currentInputString, inputField.caretPosition);
-                    currentInputString = "";
-                    inputField.text = "";
-                    activated = false;
-                    StartCoroutine(DelayedUnlock());
-                }
-
-                // 处理回车键按下事件
-                bool enterKeyDown = Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter);
-                bool enterKeyUp = Input.GetKeyUp(KeyCode.Return) || Input.GetKeyUp(KeyCode.KeypadEnter);
-
-                // 如果正在处理回车键且按键已释放，重置状态
-                if (isProcessingEnterKey && enterKeyUp)
-                {
-                    isProcessingEnterKey = false;
-                    return;
-                }
-
-                // 只在按下回车键时处理，并设置处理标志
-                if (enterKeyDown && !isProcessingEnterKey)
-                {
-                    isProcessingEnterKey = true;
-
-                    // 如果输入框已激活
-                    if (activated)
-                    {
-                        // 如果有输入内容，则提交
-                        if (!string.IsNullOrWhiteSpace(currentInputString))
-                        {
-                            OnInputFieldSubmit?.Invoke(currentInputString, inputField.caretPosition);
-                            inputField.text = "";
-                            currentInputString = "";
-                            inputField.DeactivateInputField();
-                            activated = false;
-                            StartCoroutine(DelayedUnlock());
-                        }
-                        // 如果没有输入内容，则取消
-                        else
-                        {
-                            OnInputFieldCancel?.Invoke(currentInputString, inputField.caretPosition);
-                            currentInputString = "";
-                            inputField.text = "";
-                            activated = false;
-                            inputField.DeactivateInputField();
-                            StartCoroutine(DelayedUnlock());
-                        }
-                    }
-                    // 如果输入框未激活且可以激活，则激活
-                    else if (CanActivateInputField())
-                    {
-                        OnInputFieldFocus?.Invoke(currentInputString, inputField.caretPosition);
-                        inputField.transform.position = new Vector3(80f, 80f, 0f);
-                        inputField.GetComponent<RectTransform>().sizeDelta = new Vector2(400f, 30f);
-                        inputField.ActivateInputField();
-                        inputField.Select();
-                        activated = true;
-                        LockInput = true;
-                    }
-                }
+                OnInputFieldCancel?.Invoke(currentInputString, inputField.caretPosition);
+                currentInputString = "";
+                inputField.text = "";
+                inputField.DeactivateInputField();
+                activated = false;
+                StartCoroutine(DelayedUnlock());
+                return;
             }
-            catch (Exception ex)
+
+            // 如果输入框失去焦点且之前是激活的，则取消输入
+            if (!inputField.isFocused && activated && !Input.GetKey(KeyCode.Return) && !Input.GetKey(KeyCode.KeypadEnter))
             {
+                OnInputFieldCancel?.Invoke(currentInputString, inputField.caretPosition);
+                currentInputString = "";
+                inputField.text = "";
+                activated = false;
+                StartCoroutine(DelayedUnlock());
+            }
+
+            // 处理回车键按下事件
+            bool enterKeyDown = Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter);
+            bool enterKeyUp = Input.GetKeyUp(KeyCode.Return) || Input.GetKeyUp(KeyCode.KeypadEnter);
+
+            // 如果正在处理回车键且按键已释放，重置状态
+            if (isProcessingEnterKey && enterKeyUp)
+            {
+                isProcessingEnterKey = false;
+                return;
+            }
+
+            // 只在按下回车键时处理，并设置处理标志
+            if (enterKeyDown && !isProcessingEnterKey)
+            {
+                isProcessingEnterKey = true;
+
+                // 如果输入框已激活
+                if (activated)
+                {
+                    // 如果有输入内容，则提交
+                    if (!string.IsNullOrWhiteSpace(currentInputString))
+                    {
+                        OnInputFieldSubmit?.Invoke(currentInputString, inputField.caretPosition);
+                        inputField.text = "";
+                        currentInputString = "";
+                        inputField.DeactivateInputField();
+                        activated = false;
+                        StartCoroutine(DelayedUnlock());
+                    }
+                    // 如果没有输入内容，则取消
+                    else
+                    {
+                        OnInputFieldCancel?.Invoke(currentInputString, inputField.caretPosition);
+                        currentInputString = "";
+                        inputField.text = "";
+                        activated = false;
+                        inputField.DeactivateInputField();
+                        StartCoroutine(DelayedUnlock());
+                    }
+                }
+                // 如果输入框未激活且可以激活，则激活
+                else if (CanActivateInputField())
+                {
+                    OnInputFieldFocus?.Invoke(currentInputString, inputField.caretPosition);
+                    inputField.transform.position = new Vector3(80f, 80f, 0f);
+                    inputField.GetComponent<RectTransform>().sizeDelta = new Vector2(400f, 30f);
+                    inputField.ActivateInputField();
+                    inputField.Select();
+                    activated = true;
+                    LockInput = true;
+                }
             }
         }
 

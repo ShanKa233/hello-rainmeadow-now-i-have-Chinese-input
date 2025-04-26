@@ -1,0 +1,27 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# 雨甸中文输入 项目概述
+
+这是一个为游戏"雨甸"(Rain Meadow)提供中文输入支持的附属mod。由于我们无法直接修改原版RainMeadow的代码,所以需要通过Hook和反射等方式与原版游戏交互。
+
+## 项目架构
+
+项目的主要目标是在不修改原版RainMeadow代码的情况下,提供中文输入支持。以下是主要组件:
+
+1. **核心插件**: [src/Plugin.cs](mdc:src/Plugin.cs) - 插件入口点,负责初始化各个Hook
+2. **Hook模块**: 
+   - [src/Hooks/ChatHudHook.cs](mdc:src/Hooks/ChatHudHook.cs) - 用于Hook聊天界面显示
+   - [src/Hooks/ChatLogManagerHook.cs](mdc:src/Hooks/ChatLogManagerHook.cs) - 用于Hook聊天消息处理
+3. **GUI系统**: [src/GHUDTest.cs](mdc:src/GHUDTest.cs) - 负责创建和管理自定义GUI组件
+4. **配置管理**: [src/ConfigManager.cs](mdc:src/ConfigManager.cs) - 负责管理mod的配置选项
+5. **引用管理**: [src/References.cs](mdc:src/References.cs) - 负责加载和管理对RainMeadow程序集的引用
+
+## 开发约束
+
+由于是附属mod:
+- 不能直接修改原版代码
+- 必须通过反射、Hook等方式与原版交互
+- 需要特别关注版本兼容性问题

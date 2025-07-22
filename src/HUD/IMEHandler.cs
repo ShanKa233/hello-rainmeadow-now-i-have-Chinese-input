@@ -3,10 +3,14 @@ using RWCustom;
 using System;
 using System.Linq;
 using System.Collections;
+using System.Reflection;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using RainMeadow;
+using RainMeadow.UI;
+using RainMeadow.UI.Components;
+using RainMeadow.UI.Pages;
 
 namespace GoodMorningRainMeadow
 {
@@ -54,7 +58,7 @@ namespace GoodMorningRainMeadow
                 eventSystem.AddComponent<StandaloneInputModule>();
                 DontDestroyOnLoad(eventSystem);
             }
-            
+
             // 设置输入框
             SetupInputField();
         }
@@ -97,14 +101,32 @@ namespace GoodMorningRainMeadow
         public bool IsChatActive()
         {
             if (Custom.rainWorld?.processManager == null) return false;
-            
+
             var processManager = Custom.rainWorld.processManager;
-            if (processManager.currentMainLoop is StoryOnlineMenu storyMenu && 
-                storyMenu.pages != null && 
-                storyMenu.pages.Count > 0 && 
+            if (processManager.currentMainLoop is StoryOnlineMenu storyMenu &&
+                storyMenu.pages != null &&
+                storyMenu.pages.Count > 0 &&
                 storyMenu.pages[0]?.subObjects != null)
             {
                 return storyMenu.pages[0].subObjects.Any(obj => obj is ChatTextBox);
+            }
+            // 使用模式匹配检查当前主循环是否是ArenaOnlineLobbyMenu
+            if (processManager.currentMainLoop is ArenaOnlineLobbyMenu arenaMenu)
+            {
+                // 检查arenaMenu的arenaMainLobbyPage属性是否存在
+                if (arenaMenu.arenaMainLobbyPage != null)
+                {
+                    // 检查arenaMainLobbyPage的chatMenuBox属性是否存在
+                    if (arenaMenu.arenaMainLobbyPage.chatMenuBox != null)
+                    {
+                        // 获取chatTypingBox并检查是否聚焦
+                        var typingBox = arenaMenu.arenaMainLobbyPage.chatMenuBox.chatTypingBox;
+                        if (typingBox != null)
+                        {
+                            return typingBox.Focused;
+                        }
+                    }
+                }
             }
             return IsChatHudActive();
         }
@@ -136,7 +158,7 @@ namespace GoodMorningRainMeadow
             // 创建一个简单的GameObject作为容器
             var obj = new GameObject("GHUDInputField");
             obj.transform.position = new Vector3(10000f, 10000f, 10000f);
-            
+
             // 添加Canvas组件确保正确渲染
             var canvas = obj.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -146,10 +168,10 @@ namespace GoodMorningRainMeadow
             // 添加必要的UI组件
             var inputObj = new GameObject("InputFieldObj");
             inputObj.transform.SetParent(obj.transform, false);
-            
+
             var rectTransform = inputObj.AddComponent<RectTransform>();
             rectTransform.sizeDelta = new Vector2(200, 30);
-            
+
             var image = inputObj.AddComponent<Image>();
             image.color = new Color(0.1f, 0.1f, 0.1f, 0.01f);
 
@@ -185,7 +207,7 @@ namespace GoodMorningRainMeadow
             inputField.selectionColor = new Color(0.2f, 0.6f, 1f, 0.01f);
 
             inputField.onEndEdit.AddListener(OnEndEdit);
-            
+
             // 确保不被销毁
             DontDestroyOnLoad(obj);
         }
@@ -217,7 +239,7 @@ namespace GoodMorningRainMeadow
         void InputFieldUpdate()
         {
             if (inputField == null) return;
-            
+
             if (!activated && IsChatActive())
             {
                 try

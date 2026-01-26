@@ -20,7 +20,7 @@ using static Player;
 
 namespace GoodMorningRainMeadow
 {
-	[BepInPlugin(MOD_ID, "早上好雨甸,我有中文输入", "1.2.0")]
+	[BepInPlugin(MOD_ID, "早上好雨甸,我有中文输入", "1.3.1")]
 	public class Plugin : BaseUnityPlugin
 	{
 		private static Plugin instance;

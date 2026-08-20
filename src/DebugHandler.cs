@@ -11,8 +11,9 @@ namespace GoodMorningRainMeadow
     {
         /// <summary>
         /// 调试开关，设置为false可以禁用所有日志输出
+        /// 开着可以在BepInEx日志里确认聊天框检测是否生效，日志只在开关聊天时各一条，不会刷屏
         /// </summary>
-        public static bool EnableLogging = false;
+        public static bool EnableLogging = true;
         
         /// <summary>
         /// 日志前缀

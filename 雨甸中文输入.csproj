@@ -5,8 +5,6 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>disable</Nullable>
     <LangVersion>8.0</LangVersion>
-    <UseWindowsForms>true</UseWindowsForms>
-    <UseWPF>true</UseWPF>
     <OutputPath>bin\$(Configuration)\</OutputPath>
     <AssemblyName>GoodMorningRainMeadow</AssemblyName>
   </PropertyGroup>
@@ -15,12 +13,6 @@
     <Exec Command="if not exist &quot;$(SolutionDir)mod\newest\plugins&quot; mkdir &quot;$(SolutionDir)mod\newest\plugins&quot;" />
     <Exec Command="copy /Y &quot;$(TargetPath)&quot; &quot;$(SolutionDir)mod\newest\plugins\&quot;" />
   </Target>
-
-  <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
-    <PackageReference Include="NUnit" Version="4.3.2" />
-    <PackageReference Include="Lib.Harmony" Version="2.2.2" />
-  </ItemGroup>
 
   <ItemGroup>
     <!-- Rain World 核心引用 -->
@@ -32,11 +24,12 @@
     <Reference
       Include="C:\Program Files (x86)\Steam\steamapps\common\Rain World\BepInEx\utils\*.dll" />
 
-    <!-- MOD 依赖 -->
-    <Reference
-      Include="C:\Program Files (x86)\Steam\steamapps\workshop\content\312520\2920541687\newest\plugins\*.dll" />
-    <Reference
-      Include="C:\Program Files (x86)\Steam\steamapps\workshop\content\312520\3388224007\plugins\*.dll" />
+    <!--
+      这里不引用 Rain Meadow。本模组对雨甸只有运行时依赖（见 modinfo.json 的 requirements），
+      所有涉及雨甸的类型一律走反射，编译期引用数为 0，
+      这样雨甸更新内部结构时本模组不会因为类型加载失败而崩溃。
+      详见 .kiro/steering/02-rainmeadow-chat-internals.md
+    -->
   </ItemGroup>
 
 </Project>

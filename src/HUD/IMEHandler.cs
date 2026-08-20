@@ -1,36 +1,85 @@
-﻿#pragma warning disable 0649
-using RWCustom;
 using System;
 using System.Linq;
-using System.Collections;
-using System.Reflection;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
-using RainMeadow;
-using RainMeadow.UI;
-using RainMeadow.UI.Components;
-using RainMeadow.UI.Pages;
 
 namespace GoodMorningRainMeadow
 {
     /// <summary>
-    /// IMEHandler类：中文输入模组的主要HUD系统
-    /// 负责管理UI输入框，处理中文输入
+    /// IMEHandler类：中文输入模组的核心
+    /// 游戏里出现输入框时激活一个隐藏的InputField，借此打开系统输入法通道。
+    /// 输入法提交的字符会进入Input.inputString，由输入框自己读走，本模组不搬运文本。
+    ///
+    /// 覆盖范围是所有走Remix输入体系的输入框：原版Remix设置菜单的OpTextBox / OpComboBox、
+    /// 雨甸的聊天框，以及其它用Remix UI做输入框的模组。
+    /// 需要单独识别雨甸聊天框时用IsMeadowChatActive()。
     /// </summary>
     public class IMEHandler : MonoBehaviour
     {
         // 单例模式
         public static IMEHandler Instance { get; private set; }
 
-        // UI组件
-        public InputField inputField;
-        private bool activated;
+        private const string RootName = "GHUDInputCanvas";
+        private const string InputFieldName = "GHUDInputField";
 
         /// <summary>
-        /// 检查是否应该阻止PauseMenu的调用
+        /// 原版Remix输入体系的输入通道，游戏里所有文本框接收键盘输入都要经过它。
+        /// 使用方调用CanBeTypedExt.Assign时按需挂到一个专属GameObject("RemixTyping")上，
+        /// 而它在自己的_assigned清空后会自毁，
+        /// 所以"它是否存活"等价于"此刻是否存在等待键盘输入的输入框"。
+        ///
+        /// 雨甸的RainMeadow.ButtonTypingHandler继承自它，
+        /// FindObjectOfType会连子类一起匹配，所以雨甸聊天框同样覆盖。
+        ///
+        /// 这样判断不碰任何菜单页面层级、HUD归属或具体输入框类型，
+        /// 雨甸再挪聊天框的位置（0.1.15就把ChatHud从cameras[0].hud搬到了RMOverlayHUD）也不受影响，
+        /// 将来新增输入框同样自动覆盖。
+        /// 用字符串查类型而非typeof，因为TypingHandler是internal的，
+        /// 万一原版改名也只会静默失灵并留下日志，不会抛TypeLoadException。
         /// </summary>
-        public bool ShouldBlockPauseMenu() => activated && inputField != null;
+        private static readonly Type TypingHandlerType =
+            FindType("Menu.Remix.MixedUI.TypingHandler", "Assembly-CSharp");
+
+        /// <summary>
+        /// 雨甸聊天框专用的子类，用来区分当前输入框是不是雨甸的聊天窗口。
+        /// 没装雨甸时为null，不影响其它输入框的输入法支持。
+        /// </summary>
+        private static readonly Type MeadowChatHandlerType =
+            FindType("RainMeadow.ButtonTypingHandler", "Rain Meadow");
+
+        /// <summary>
+        /// 在已加载的程序集里按名字找类型，优先在指定程序集里找
+        /// </summary>
+        private static Type FindType(string typeName, string preferredAssembly)
+        {
+            var type = Type.GetType(typeName + ", " + preferredAssembly);
+            if (type != null) return type;
+
+            // 程序集改名了就全局找一遍
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                try
+                {
+                    type = assembly.GetType(typeName);
+                    if (type != null) return type;
+                }
+                catch (Exception)
+                {
+                    // 个别程序集反射会抛异常，跳过即可
+                }
+            }
+            return null;
+        }
+
+        // UI组件
+        public InputField inputField;
+
+        // 缓存存活的输入通道组件。Unity的==null能识别已销毁对象，
+        // 所以打字期间这里直接命中缓存，不需要每帧扫描场景。
+        private UnityEngine.Object cachedHandler;
+        private UnityEngine.Object cachedMeadowHandler;
+        private bool activated;
 
         /// <summary>
         /// 初始化单例
@@ -50,7 +99,17 @@ namespace GoodMorningRainMeadow
         /// </summary>
         void Start()
         {
-            // 确保有EventSystem
+            if (TypingHandlerType == null)
+            {
+                DebugHandler.LogError("找不到 Menu.Remix.MixedUI.TypingHandler，中文输入将不会生效。原版可能更换了输入处理方式。");
+            }
+            else if (MeadowChatHandlerType == null)
+            {
+                // 不影响其它输入框，只是无法单独识别雨甸聊天框
+                DebugHandler.Log("未找到 RainMeadow.ButtonTypingHandler，雨甸未安装或已改名");
+            }
+
+            // 确保有EventSystem，否则InputField无法获得焦点
             if (FindObjectOfType<EventSystem>() == null)
             {
                 var eventSystem = new GameObject("EventSystem");
@@ -59,7 +118,6 @@ namespace GoodMorningRainMeadow
                 DontDestroyOnLoad(eventSystem);
             }
 
-            // 设置输入框
             SetupInputField();
         }
 
@@ -74,7 +132,6 @@ namespace GoodMorningRainMeadow
             }
             if (inputField != null)
             {
-                inputField.onValueChanged.RemoveAllListeners();
                 inputField.onEndEdit.RemoveAllListeners();
             }
         }
@@ -85,50 +142,30 @@ namespace GoodMorningRainMeadow
         void Update() => InputFieldUpdate();
 
         /// <summary>
-        /// 检查聊天框是否开启
+        /// 是否存在任何等待键盘输入的输入框。
+        /// 原版Remix设置菜单、雨甸聊天框、其它用Remix UI的模组都算在内。
         /// </summary>
-        public bool IsChatHudActive()
-        {
-            RainWorldGame game = Custom.rainWorld?.processManager?.currentMainLoop as RainWorldGame;
-            if (game == null || game.cameras == null || game.cameras.Length == 0 || game.cameras[0]?.hud?.parts == null) return false;
-            ChatHud chatHud = game.cameras[0].hud.parts.OfType<ChatHud>().FirstOrDefault();
-            return chatHud != null && chatHud.chatInputActive;
-        }
+        public bool IsTypingActive() => IsHandlerAlive(TypingHandlerType, ref cachedHandler);
 
         /// <summary>
-        /// 检查聊天是否激活
+        /// 当前是否存在雨甸的聊天框。
+        /// 这是留给调用方的口子：想只在雨甸聊天时开输入法，
+        /// 把InputFieldUpdate里的IsTypingActive()换成这个即可。
         /// </summary>
-        public bool IsChatActive()
-        {
-            if (Custom.rainWorld?.processManager == null) return false;
+        public bool IsMeadowChatActive() => IsHandlerAlive(MeadowChatHandlerType, ref cachedMeadowHandler);
 
-            var processManager = Custom.rainWorld.processManager;
-            if (processManager.currentMainLoop is StoryOnlineMenu storyMenu &&
-                storyMenu.pages != null &&
-                storyMenu.pages.Count > 0 &&
-                storyMenu.pages[0]?.subObjects != null)
-            {
-                return storyMenu.pages[0].subObjects.Any(obj => obj is ChatTextBox);
-            }
-            // 使用模式匹配检查当前主循环是否是ArenaOnlineLobbyMenu
-            if (processManager.currentMainLoop is ArenaOnlineLobbyMenu arenaMenu)
-            {
-                // 检查arenaMenu的arenaMainLobbyPage属性是否存在
-                if (arenaMenu.arenaMainLobbyPage != null)
-                {
-                    // 检查arenaMainLobbyPage的chatMenuBox属性是否存在
-                    if (arenaMenu.arenaMainLobbyPage.chatMenuBox != null)
-                    {
-                        // 获取chatTypingBox并检查是否聚焦
-                        var typingBox = arenaMenu.arenaMainLobbyPage.chatMenuBox.chatTypingBox;
-                        if (typingBox != null)
-                        {
-                            return typingBox.Focused;
-                        }
-                    }
-                }
-            }
-            return IsChatHudActive();
+        /// <summary>
+        /// 场景里是否有该类型的输入通道存活
+        /// </summary>
+        private static bool IsHandlerAlive(Type handlerType, ref UnityEngine.Object cache)
+        {
+            if (handlerType == null) return false;
+
+            // 组件还活着说明输入框还在，无需重新扫描
+            if (cache != null) return true;
+
+            cache = FindObjectOfType(handlerType);
+            return cache != null;
         }
 
         /// <summary>
@@ -136,140 +173,125 @@ namespace GoodMorningRainMeadow
         /// </summary>
         void SetupInputField()
         {
-            var existingInputFields = FindObjectsOfType<InputField>().Where(f => f.gameObject.name == "GHUDInputField").ToArray();
+            // 模组重载时旧对象会因为DontDestroyOnLoad残留下来，这里复用或清掉多余的
+            var existing = FindObjectsOfType<InputField>()
+                .Where(f => f.gameObject.name == InputFieldName)
+                .ToArray();
 
-            if (existingInputFields.Length > 1)
+            if (existing.Length > 0)
             {
-                for (int i = 1; i < existingInputFields.Length; i++)
+                for (int i = 1; i < existing.Length; i++)
                 {
-                    Destroy(existingInputFields[i].gameObject);
+                    Destroy(existing[i].transform.root.gameObject);
                 }
-            }
 
-            if (existingInputFields.Length > 0)
-            {
-                inputField = existingInputFields[0];
-                inputField.onValueChanged.RemoveAllListeners();
+                inputField = existing[0];
                 inputField.onEndEdit.RemoveAllListeners();
                 inputField.onEndEdit.AddListener(OnEndEdit);
                 return;
             }
 
-            // 创建一个简单的GameObject作为容器
-            var obj = new GameObject("GHUDInputField");
-            obj.transform.position = new Vector3(10000f, 10000f, 10000f);
+            // 挪到屏幕外，配合近乎全透明的颜色，玩家看不到它
+            var root = new GameObject(RootName);
+            root.transform.position = new Vector3(10000f, 10000f, 10000f);
+            DontDestroyOnLoad(root);
 
-            // 添加Canvas组件确保正确渲染
-            var canvas = obj.AddComponent<Canvas>();
+            var canvas = root.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            obj.AddComponent<CanvasScaler>();
-            obj.AddComponent<GraphicRaycaster>();
 
-            // 添加必要的UI组件
-            var inputObj = new GameObject("InputFieldObj");
-            inputObj.transform.SetParent(obj.transform, false);
+            var inputObj = new GameObject(InputFieldName);
+            inputObj.transform.SetParent(root.transform, false);
+            inputObj.AddComponent<RectTransform>().sizeDelta = new Vector2(200f, 30f);
+            inputObj.AddComponent<Image>().color = new Color(0.1f, 0.1f, 0.1f, 0.01f);
 
-            var rectTransform = inputObj.AddComponent<RectTransform>();
-            rectTransform.sizeDelta = new Vector2(200, 30);
-
-            var image = inputObj.AddComponent<Image>();
-            image.color = new Color(0.1f, 0.1f, 0.1f, 0.01f);
-
-            // 创建文本组件
-            var text = new GameObject("GHUD_Text");
-            text.transform.SetParent(inputObj.transform, false);
-            var textRect = text.AddComponent<RectTransform>();
-            textRect.sizeDelta = new Vector2(190, 20);
+            // InputField需要一个文本组件承载内容，必须是子对象
+            var textObj = new GameObject("GHUD_Text");
+            textObj.transform.SetParent(inputObj.transform, false);
+            var textRect = textObj.AddComponent<RectTransform>();
+            textRect.sizeDelta = new Vector2(190f, 20f);
             textRect.anchoredPosition = Vector2.zero;
-            var inputText = text.AddComponent<Text>();
-            inputText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-            inputText.color = new Color(1f, 1f, 1f, 0.01f);
-            inputText.alignment = TextAnchor.MiddleLeft;
 
-            // 创建占位符组件
-            var placeHolder = new GameObject("GHUD_PlaceHolder");
-            placeHolder.transform.SetParent(inputObj.transform, false);
-            var placeHolderRect = placeHolder.AddComponent<RectTransform>();
-            placeHolderRect.sizeDelta = new Vector2(190, 20);
-            placeHolderRect.anchoredPosition = Vector2.zero;
-            var placeholderText = placeHolder.AddComponent<Text>();
-            placeholderText.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-            placeholderText.color = new Color(0.5f, 0.5f, 0.5f, 0.01f);
-            placeholderText.text = "";
-            placeholderText.alignment = TextAnchor.MiddleLeft;
+            var text = textObj.AddComponent<Text>();
+            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.color = new Color(1f, 1f, 1f, 0.01f);
+            text.alignment = TextAnchor.MiddleLeft;
 
-            // 添加InputField组件
             inputField = inputObj.AddComponent<InputField>();
-            inputField.textComponent = inputText;
-            inputField.placeholder = placeholderText;
+            inputField.textComponent = text;
             inputField.caretWidth = 0;
             inputField.caretBlinkRate = 0;
             inputField.selectionColor = new Color(0.2f, 0.6f, 1f, 0.01f);
-
             inputField.onEndEdit.AddListener(OnEndEdit);
-
-            // 确保不被销毁
-            DontDestroyOnLoad(obj);
         }
 
         /// <summary>
         /// 处理输入完成
         /// </summary>
-        void OnEndEdit(string value)
-        {
-            ResetInputField();
-        }
+        void OnEndEdit(string value) => ResetInputField();
 
         /// <summary>
         /// 重置输入框
         /// </summary>
         private void ResetInputField()
         {
-            if (inputField != null)
-            {
-                inputField.text = "";
-                inputField.DeactivateInputField();
-                activated = false;
-            }
+            if (inputField == null) return;
+
+            inputField.text = "";
+            inputField.DeactivateInputField();
+            activated = false;
         }
 
         /// <summary>
-        /// 更新输入框状态
+        /// 跟随输入框的出现与消失，开关输入法通道
         /// </summary>
         void InputFieldUpdate()
         {
             if (inputField == null) return;
 
-            if (!activated && IsChatActive())
+            bool typingActive = IsTypingActive();
+
+            if (!activated && typingActive)
             {
                 try
                 {
                     inputField.ActivateInputField();
                     inputField.Select();
                     activated = true;
+                    DebugHandler.Log($"{DescribeActiveInput()}出现，已开启输入法");
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogWarning($"激活输入框失败: {ex.Message}");
+                    DebugHandler.LogError("激活输入框失败", ex);
                 }
                 return;
             }
-            if (activated && !IsChatActive())
+
+            if (activated && !typingActive)
             {
                 ResetInputField();
+                DebugHandler.Log("输入框关闭，已关闭输入法");
                 return;
+            }
+
+            // 文本由输入框自己从Input.inputString读取，这里的内容没有用处，
+            // 长时间打字会一直堆积，攒够一批就清掉
+            if (activated && inputField.text.Length > 64)
+            {
+                inputField.text = "";
             }
         }
 
         /// <summary>
-        /// 初始化方法（外部调用）
+        /// 描述当前是哪种输入框，只用于日志
         /// </summary>
-        internal void Initialize() { }
+        private string DescribeActiveInput()
+        {
+            if (cachedHandler == null) return "输入框";
+            if (MeadowChatHandlerType != null && MeadowChatHandlerType.IsInstanceOfType(cachedHandler))
+            {
+                return "雨甸聊天框";
+            }
+            return $"游戏输入框({cachedHandler.GetType().Name})";
+        }
     }
-
-    /// <summary>
-    /// 输入框文本事件委托
-    /// </summary>
-    public delegate void InputFieldTextEvent(string text, int caretPos);
 }
-

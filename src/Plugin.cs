@@ -1,6 +1,5 @@
 ﻿using System.Security.Permissions;
 using BepInEx;
-using UnityEngine;
 
 #pragma warning disable CS0618
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
@@ -32,12 +31,10 @@ namespace GoodMorningRainMeadow
 			initialized = true;
 			// 原版Remix文本框会用正则拒收非ASCII，光开输入法打不出中文，这里放行
 			RemixUnicodeHook.Apply();
-			//初始化imehandler
+			//初始化imehandler：直接挂在雨世界主对象上，主对象跨场景永存，不用自己管生命周期
 			if (IMEHandler.Instance == null)
 			{
-				var imeHandlerObject = new GameObject("IMEHandler");
-				imeHandlerObject.AddComponent<IMEHandler>();
-				DontDestroyOnLoad(imeHandlerObject);
+				self.gameObject.AddComponent<IMEHandler>();
 			}
 		}
 	}

@@ -12,7 +12,7 @@ obj/
 *.vssscc
 
 # 编译后的DLL
-mod/plugins/*.dll
+mod/**/plugins/*.dll
 
 # NuGet包
 packages/

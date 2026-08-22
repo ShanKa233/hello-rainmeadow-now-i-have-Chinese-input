@@ -10,8 +10,8 @@
   </PropertyGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="if not exist &quot;$(SolutionDir)mod\newest\plugins&quot; mkdir &quot;$(SolutionDir)mod\newest\plugins&quot;" />
-    <Exec Command="copy /Y &quot;$(TargetPath)&quot; &quot;$(SolutionDir)mod\newest\plugins\&quot;" />
+    <Exec Command="if not exist &quot;$(MSBuildProjectDirectory)\..\mod\newest\plugins&quot; mkdir &quot;$(MSBuildProjectDirectory)\..\mod\newest\plugins&quot;" />
+    <Exec Command="copy /Y &quot;$(TargetPath)&quot; &quot;$(MSBuildProjectDirectory)\..\mod\newest\plugins\&quot;" />
   </Target>
 
   <ItemGroup>

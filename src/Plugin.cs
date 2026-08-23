@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace GoodMorningRainMeadow
 {
-	[BepInPlugin(MOD_ID, "早上好现在我有IME", "1.4.0")]
+	[BepInPlugin(MOD_ID, "早上好现在我有IME", "1.4.1")]
 	public class Plugin : BaseUnityPlugin
 	{
 		private bool initialized;

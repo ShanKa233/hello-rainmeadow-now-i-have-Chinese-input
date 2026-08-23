@@ -1,13 +1,14 @@
 {
   "id": "goodmorningrainmeadow.chineseinput",
-  "name": "Good Morning Rain Meadow, Now I Have Chinese Input!",
+  "name": "Good Morning Rain World, Now I Have IME!",
   "version": "1.4.0",
   "authors": "GoodMorningRainMeadow",
   "description": "为雨甸添加中文输入支持<LINE>让你可以在雨甸聊天框中输入中文<LINE>特别鸣谢：感谢哈维(Harvie)提供的聊天UI核心代码<LINE>Add Chinese input support for Rain Meadow<LINE>Allows you to input Chinese in Rain Meadow chat box<LINE>Special thanks: Thanks to Harvie for providing the core chat UI code",
   "requirements": [
-    "henpemaz_rainmeadow"
   ],
-  "requirements_names": [],
+  "priorities": [
+    "henpemaz_rainmeadow",
+    "chililisoup.nameyourfriends"],
   "tags": [
     "Tools"
   ]

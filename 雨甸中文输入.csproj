@@ -10,8 +10,8 @@
   </PropertyGroup>
 
   <Target Name="PostBuild" AfterTargets="PostBuildEvent">
-    <Exec Command="if not exist &quot;$(MSBuildProjectDirectory)\..\mod\newest\plugins&quot; mkdir &quot;$(MSBuildProjectDirectory)\..\mod\newest\plugins&quot;" />
-    <Exec Command="copy /Y &quot;$(TargetPath)&quot; &quot;$(MSBuildProjectDirectory)\..\mod\newest\plugins\&quot;" />
+    <Exec Command="if not exist &quot;$(SolutionDir)mod\newest\plugins&quot; mkdir &quot;$(SolutionDir)mod\newest\plugins&quot;" />
+    <Exec Command="copy /Y &quot;$(TargetPath)&quot; &quot;$(SolutionDir)mod\newest\plugins\&quot;" />
   </Target>
 
   <ItemGroup>
@@ -24,12 +24,14 @@
     <Reference
       Include="C:\Program Files (x86)\Steam\steamapps\common\Rain World\BepInEx\utils\*.dll" />
 
-    <!--
-      这里不引用 Rain Meadow。本模组对雨甸只有运行时依赖（见 modinfo.json 的 requirements），
-      所有涉及雨甸的类型一律走反射，编译期引用数为 0，
-      这样雨甸更新内部结构时本模组不会因为类型加载失败而崩溃。
-      详见 .kiro/steering/02-rainmeadow-chat-internals.md
-    -->
+    <!-- MOD 依赖 -->
+    <Reference
+      Include="C:\Program Files (x86)\Steam\steamapps\workshop\content\312520\2920541687\newest\plugins\*.dll" />
+    <Reference
+      Include="C:\Program Files (x86)\Steam\steamapps\workshop\content\312520\3388224007\plugins\*.dll" />
+
+    <Reference
+      Include="C:\Program Files (x86)\Steam\steamapps\workshop\content\312520\3775963449\plugins\*.dll" />
   </ItemGroup>
 
 </Project>

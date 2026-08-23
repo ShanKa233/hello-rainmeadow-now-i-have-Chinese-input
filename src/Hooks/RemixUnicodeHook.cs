@@ -42,26 +42,13 @@ namespace GoodMorningRainMeadow
         {
             if (hook != null) return;
 
-            try
-            {
-                // DeclaredOnly：value在UIconfig和OpTextBox里各有一份，
-                // 带正则校验的是OpTextBox这份override
-                MethodInfo setter = typeof(OpTextBox)
-                    .GetProperty("value", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly)
-                    ?.GetSetMethod();
+            // DeclaredOnly：value在UIconfig和OpTextBox里各有一份，
+            // 带正则校验的是OpTextBox这份override
+            MethodInfo setter = typeof(OpTextBox)
+                .GetProperty("value", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly)
+                ?.GetSetMethod();
 
-                if (setter == null)
-                {
-                    DebugHandler.LogError("找不到OpTextBox.set_value，Remix文本框的中文输入不会生效");
-                    return;
-                }
-
-                hook = new ILHook(setter, AllowUnicode);
-            }
-            catch (Exception ex)
-            {
-                DebugHandler.LogError("挂载Remix文本框的中文支持失败", ex);
-            }
+            hook = new ILHook(setter, AllowUnicode);
         }
 
         /// <summary>
@@ -85,12 +72,12 @@ namespace GoodMorningRainMeadow
 
             if (patched == 0)
             {
-                DebugHandler.LogError(
+                ModLog.LogError(
                     "OpTextBox.set_value里没找到正则校验，原版结构可能变了，Remix文本框的中文输入不会生效");
                 return;
             }
 
-            DebugHandler.Log($"已放行Remix文本框的非ASCII字符（改写{patched}处校验）");
+            ModLog.Log($"已放行Remix文本框的非ASCII字符（改写{patched}处校验）");
         }
 
         /// <summary>
